@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Sight Marks</title>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <div id="input">
+      <table id="sight settings">
+        <tbody id="sight_settings">
+          <tr>
+            <td>Sight TPI</td>
+            <td><input type="number" id="sight_tpi" required /></td>
+          </tr>
+          <tr>
+            <td>Sight Scale</td>
+            <td><input type="number" id="sight_scale" required /></td>
+          </tr>
+          <tr>
+            <td>Nock to Sight (mm)</td>
+            <td><input type="number" id="nock_to_pin" required /></td>
+          </tr>
+          <tr>
+            <td>Nock to Eye (mm)</td>
+            <td><input type="number" id="nock_to_eye" required /></td>
+          </tr>
+        </tbody>
+      </table>
+      <table id="measured">
+        <thead>
+          <tr>
+            <th>Distance</th>
+            <th>Mark</th>
+          </tr>
+        </thead>
+        <tbody id="input_marks">
+          <tr>
+            <td><input type="number" name="dist" /></td>
+            <td><input type="number" name="mark" /></td>
+            <td>
+              <select>
+                <option value="m">Meter</option>
+                <option value="yd">Yard</option>
+                <option value="ft">Feet</option>
+              </select>
+            </td>
+            <td><input type="button" name="add" onclick="addMark(this);" value="Add Mark" /></td>
+            <td><input type="button" name="remove" onclick="removeMark(this);" value="Remove Mark" /></td>
+          </tr>
+        </tbody>
+      </table>
+      <select id="calc_unit">
+        <option value="m">Meter</option>
+        <option value="yd">Yard</option>
+        <option value="ft">Feet</option>
+      </select>
+      <button id="calculate">Calculate</button>
+      <script>
+        function addMark(n) {
+          var tr = n.parentNode.parentNode.cloneNode(true);
+          document.getElementById('input_marks').appendChild(tr);
+        }
+
+        function removeMark(n) {
+          var table = document.getElementById('input_marks');
+          if (table.rows.length > 1) {
+            n.closest('tr').remove();
+          }
+        }
+      </script>
+    </div>
+    <div id="results">
+      <h1>Trajectory</h1>
+      <table id="vals">
+          <tr>
+            <td>Velocity</td>
+            <td id="velocity"></td>
+          </tr>
+          <tr>
+            <td>Drag</td>
+            <td id="drag"></td>
+          </tr>
+          <tr>
+            <td>Fit Score (closer to 0 is better)</td>
+            <td id="fit_score"></td>
+          </tr>
+        </tbody>
+      </table>
+      <div id="trajectoryContainer">
+        <canvas id="trajectory"></canvas>
+      </div>
+      <div id="graph"></div>
+      <div id="resultsContainer">
+        <h1>Marks</h1>
+        <table id="calc_m">
+          <thead>
+            <tr>
+              <th>Distance</th>
+              <th>Mark</th>
+            </tr>
+          </thead>
+          <tbody id="marks"></tbody>
+        </table>
+     </div>
+    </div>
+    <script src="src/trajectory.js"></script>
+  </body>
+</html>
