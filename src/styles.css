@@ -1,12 +1,15 @@
 body {
   font-family: sans-serif;
-  font-size: 1.5em;
+  font-size: 1.3em;
 }
 
 .big {
-  font-size: 2em;
+  font-size: 1.5em;
 }
 
+input, select {
+  font-size: 1.2em;
+}
 
 div {
   padding: 1em;
@@ -18,5 +21,9 @@ div {
 .centered {
   display: flex;
   justify-content: center;
+}
+
+#graph {
+  height: 400px;
 }
 

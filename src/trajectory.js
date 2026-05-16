@@ -29,8 +29,6 @@ let drag_coefficient = 0.03;
 // raising the bow raises the peep?
 //
 function angleToMark(sight_settings, a, t) {
-  console.log("angle to mark for a " + a.toFixed(5) + " at d " + t.toFixed(0));
-
   let m1 = Math.sin(a) * sight_settings.nock_to_pin;
   
   let o = Math.atan(t / sight_settings.nock_to_eye);
@@ -42,7 +40,8 @@ function angleToMark(sight_settings, a, t) {
   let mm_per_turns = 25.4 / sight_settings.tpi;
   let m = d * 1000 / mm_per_turns / sight_settings.sight_scale;
 
-  console.log("angle to mark for a " + a.toFixed(5) + " at d " + t.toFixed(0) + " o = " + o.toFixed(3) + " m1 = " + m1.toFixed(3) + " m2 = " + m2.toFixed(3));
+  //  console.log("angle to mark for a " + a.toFixed(5) + " at d " + t.toFixed(0) + " o = " + o.toFixed(3) + " m1 = " + m1.toFixed(3) + " m2 = " + m2.toFixed(3));
+
   return m;
 }
 
@@ -198,7 +197,7 @@ function findVelocityAndDrag(sight_settings, data) {
       }
     }
 
-    c_min = c_best - c_step;
+    c_min = Math.max(c_best - c_step, 0);
     c_max = c_best + c_step;
   }
 
@@ -361,11 +360,16 @@ function populateMarks(table, unit, sight_settings, v, c, offset) {
 }
 
 function graphMarks(div, unit, sight_settings, v, c, offset, measured) {
+  console.log("graphing");
+  console.log(sight_settings.sight_scale);
+
   let data = getMarks(unit, sight_settings, v, c, offset, 1, 100, 0.25);
+  console.log(data);
 
   var measuredInUnit = [];
   for (let i = 0; i < measured.length; i++) {
     measuredInUnit.push([measured[i][0] / unit, measured[i][1]]);
+    console.log(measured[i]);
   }
 
   Highcharts.chart(div, {
@@ -559,8 +563,8 @@ function calculate() {
   populateMarks(marksBody, unit, sight_settings, v, c, offset);
 
   // TEST
-  console.log("TEST");
-  getMarks(unit, sight_settings, v, c, offset, 1, 10, 1);
+  // console.log("TEST");
+  // getMarks(unit, sight_settings, v, c, offset, 1, 10, 1);
 }
 
 document.getElementById("calculate").onclick = function() {
@@ -595,5 +599,5 @@ function setDefaults() {
 }
 
 setDefaults();
-// calculate();
+calculate();
 
