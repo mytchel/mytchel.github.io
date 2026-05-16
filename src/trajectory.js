@@ -1,6 +1,5 @@
 import regression from "regression";
 import Highcharts from "highcharts";
-import { data } from "../src/data.js";
 
 let radian = 0.01745329;
 let feet_to_m = 0.3048;
@@ -9,6 +8,7 @@ let yard_to_m = 0.9144;
 let g = 9.80665;
 
 let t_step = 0.001;
+let c_step = 0.0001;
 let y_error = 0.0001;
 let x_error = 0.0001;
 let v_error = 0.0001 * feet_to_m;
@@ -20,7 +20,17 @@ let c_guess = 0.03
 
 let drag_coefficient = 0.03;
 
+// TODO: compound
+// and take into account the sight bar angling
+// it also is wrong for very close, point blank shouldn't read as much more than 10, it should zero on the arrow. Do I need to have arrow to sight zero measured?
+// do I need to account for the eye not being directly above the arrow?
+// Should the measure be eye to pin, not nock to pin?
+//
+// raising the bow raises the peep?
+//
 function angleToMark(sight_settings, a, t) {
+  console.log("angle to mark for a " + a.toFixed(5) + " at d " + t.toFixed(0));
+
   let m1 = Math.sin(a) * sight_settings.nock_to_pin;
   
   let o = Math.atan(t / sight_settings.nock_to_eye);
@@ -32,6 +42,7 @@ function angleToMark(sight_settings, a, t) {
   let mm_per_turns = 25.4 / sight_settings.tpi;
   let m = d * 1000 / mm_per_turns / sight_settings.sight_scale;
 
+  console.log("angle to mark for a " + a.toFixed(5) + " at d " + t.toFixed(0) + " o = " + o.toFixed(3) + " m1 = " + m1.toFixed(3) + " m2 = " + m2.toFixed(3));
   return m;
 }
 
@@ -120,8 +131,8 @@ function calc_offset(sight_settings, data, v, c) {
 
 function findVelocity(sight_settings, data, c) {
   var v = v_guess * feet_to_m;
-  let v_max = v * 1.5;
-  let v_min = v * 0.8;
+  let v_max = v * 2;
+  let v_min = v * 0.7;
 
   var v_best = v;
   var error_best = 1000;
@@ -160,42 +171,40 @@ function findVelocityAndDrag(sight_settings, data) {
   let c_best = 0;
   let error_best = 1000;
 
-  let c = c_guess;
-  let c_min = c_guess * 0.1;
+  let c_min = 0;
   let c_max = c_guess * 5;
 
-  for (let i = 0; i < tries; i++) {
-    let v = findVelocity(sight_settings, data, c);
+  while (c_max - c_min > c_error) {
+    let c_step = (c_max - c_min) / 10;
 
-    let [offset, gradient, score] = calc_offset(sight_settings, data, v, c);
+    console.log("check from " + c_min + " to " + c_max + " each " + c_step);
 
-    console.log("c = " + c + " then v = " + v / feet_to_m + " gradient = " + gradient + " score = " + score);
+    for (let c = c_min; c < c_max; c += c_step) {
+      let v = findVelocity(sight_settings, data, c);
 
-    let error = score 
-    if (error < error_best) {
-      error_best = error;
-      v_best = v;
-      c_best = c;
+      let [offset, gradient, score] = calc_offset(sight_settings, data, v, c);
+
+      console.log("c = " + c + " then v = " + v / feet_to_m + " score = " + score);
+
+      let error = score 
+      if (error < error_best) {
+        error_best = error;
+        v_best = v;
+        c_best = c;
+
+      } else if (error > error_best * 3 || error > 10) {
+        console.log("Getting worse");
+        break;
+      }
     }
 
-    // continue;
-
-    if (gradient < 0) {
-      c_min = c;
-    } else {
-      c_max = c;
-    }
-
-
-    if (c_max - c_min < c_error) {
-      break;
-    }
-
-    c = c_min + (c_max - c_min) / 2;
+    c_min = c_best - c_step;
+    c_max = c_best + c_step;
   }
 
   return [v_best, c_best]
 }
+
 
 function maxHeight(v, c, d) {
   var max = 0;
@@ -317,6 +326,7 @@ function toUnitName(scale) {
     throw new Error("unknown unit");
   }
 }
+
 function getMarks(unit, sight_settings, v, c, offset, min, max, step) {
   var data = [];
 
@@ -367,7 +377,7 @@ function graphMarks(div, unit, sight_settings, v, c, offset, measured) {
       title: {
         text: "Mark"
       },
-      max: 10,
+      max: 100 / sight_settings.sight_scale,
       min: 0,
       reversed: true,
     },
@@ -417,33 +427,97 @@ function graphMarks(div, unit, sight_settings, v, c, offset, measured) {
   });
 }
 
-function readMarks(table) {
+function readMarks(table, sight_settings) {
   var data = [];
-
-  console.log("have " + table.rows.length + " rows");
 
   for (let i = 0; i < table.rows.length; i++) {
     const cells = table.rows[i].cells;
    
-    console.log("row " + i + " has " + cells.length + " cells");
-
-    const dist = cells[0].querySelector("input")?.value;
-    const mark = cells[1].querySelector("input")?.value;
+    const dist = parseFloat(cells[0].querySelector("input")?.value);
+    const mark = parseFloat(cells[1].querySelector("input")?.value);
     const unit = cells[2].querySelector("select")?.value;
 
-    const d = parseFloat(dist);
+    console.log("Have mark for " + dist + unit + " = " + mark);
+
+    if (isNaN(dist)) {
+      throw new Error("Invalid input data: distance not a number: " + cells[0].querySelector("input")?.value);
+    }
+
+    if (isNaN(mark)) {
+      throw new Error("Invalid input data: mark not a number: " + cells[1].querySelector("input")?.value);
+    }
+
+    if (mark < 0 || mark > 100 / sight_settings.sight_scale) {
+      throw new Error("Invalid input data: mark out of range");
+    }
+
+    let scale = toScale(unit);
 
     data.push([
-      d * toScale(unit),
+      dist,
+      unit,
       parseFloat(mark)
     ]);
   }
 
   data.sort((a, b) => a[0] - b[0]);
 
-  console.log("have data: " + data);
+  return data;
+}
+
+function marksToM(marks) {
+  var data = [];
+  for (let i = 0; i < marks.length; i++) {
+    let d = marks[i][0];
+    let u = marks[i][1];
+    let m = marks[i][2];
+
+    data.push([d * toScale(u), m]);
+  }
 
   return data;
+}
+
+function storeValues(sight_settings, marks) {
+  console.log("Storing values");
+
+  localStorage.setItem("sight_settings", JSON.stringify(sight_settings));
+  localStorage.setItem("marks", JSON.stringify(marks));
+}
+
+function readValues() {
+  console.log("Reading values");
+
+  try {
+    let sight_settings = JSON.parse(localStorage.getItem("sight_settings"));
+    let marks = JSON.parse(localStorage.getItem("marks"));
+
+    if (sight_settings != null && marks != null) {
+      return [sight_settings, marks];
+    } 
+
+  } catch {
+    localStorage.removeItem("sight_settings");
+    localStorage.removeItem("marks");
+  }
+
+  let sight_settings = {
+    nock_to_pin: 1020 / 1000,
+    nock_to_eye: 110 / 1000,
+    tpi: 24,
+    sight_scale: 10,
+  };
+
+  let marks = [
+    [18, 'm', 1.02],
+    [30, 'm', 2.43],
+    [50, 'm', 4.85],
+    [70, 'm', 7.7],
+  ];
+
+  storeValues(sight_settings, marks);
+
+  return [sight_settings, marks];
 }
 
 function calculate() {
@@ -457,7 +531,11 @@ function calculate() {
   };
 
   var table = document.getElementById('input_marks');
-  let data = readMarks(table);
+  let marks = readMarks(table, sight_settings);
+
+  storeValues(sight_settings, marks);
+
+  let data = marksToM(marks);
 
   let unit = toScale(document.getElementById("calc_unit").value);
 
@@ -472,13 +550,17 @@ function calculate() {
 
   graphMarks("graph", unit, sight_settings, v, c, offset, data);
 
-  const canvas = document.getElementById("trajectory");
+  const canvas = document.getElementById("trajectory_canvas");
 
   let dists = [3, 5, 10, 18, 20, 25, 30, 50, 70, 80];
   drawTrajectories(canvas, unit, dists, v, c, offset);
 
   var marksBody = document.getElementById('marks');
   populateMarks(marksBody, unit, sight_settings, v, c, offset);
+
+  // TEST
+  console.log("TEST");
+  getMarks(unit, sight_settings, v, c, offset, 1, 10, 1);
 }
 
 document.getElementById("calculate").onclick = function() {
@@ -486,33 +568,32 @@ document.getElementById("calculate").onclick = function() {
 };
 
 function setDefaults() {
-  console.log("Setting sight defaults");
+  let [sight_settings, marks] = readValues();
 
-  document.getElementById('sight_tpi').value = '24';
-  document.getElementById('sight_scale').value = '10';
-  document.getElementById('nock_to_pin').value = '1020';
-  document.getElementById('nock_to_eye').value = '110';
+  console.log("Have sight settings: " + sight_settings);
+  console.log("Have marks: " + marks);
 
-  console.log("Setting mark defaults");
+  document.getElementById('sight_tpi').value = sight_settings.tpi;
+  document.getElementById('sight_scale').value = sight_settings.sight_scale;
+  document.getElementById('nock_to_pin').value = sight_settings.nock_to_pin * 1000;
+  document.getElementById('nock_to_eye').value = sight_settings.nock_to_eye * 1000;
 
   var defaultMarks = document.getElementById('input_marks');
 
-  for (let i = 0; i < data.length; i++) {
+  for (let i = 0; i < marks.length; i++) {
     if (i > 0) {
-      console.log("Cloning mark");
       var clone = defaultMarks.rows[i - 1].cloneNode(true);
       defaultMarks.appendChild(clone);
     }
-    
-    console.log("Setting mark");
+   
     const cells = defaultMarks.rows[i].cells;
      
-    cells[0].querySelector("input").value = data[i][0];
-    cells[1].querySelector("input").value = data[i][1];
-    cells[2].querySelector("select").value = "m";
+    cells[0].querySelector("input").value = marks[i][0];
+    cells[2].querySelector("select").value = marks[i][1];
+    cells[1].querySelector("input").value = marks[i][2];
   }
 }
 
 setDefaults();
-calculate();
+// calculate();
 

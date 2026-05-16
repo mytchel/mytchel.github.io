@@ -1,8 +1,8 @@
 {
-  "name": "polynomial-regression",
+  "name": "Sight Marks Calculator",
   "version": "1.0.0",
-  "author": "Mustapha Mekhatria",
-  "description": "Data science:\nPolynomial regression ",
+  "author": "Mytchel Hammond",
+  "description": "Sight Mark Calculator",
   "main": "index.html",
   "scripts": {
     "start": "parcel index.html --open",
@@ -16,9 +16,5 @@
     "@babel/core": "7.2.0",
     "parcel-bundler": "^1.6.1"
   },
-  "keywords": [
-    "regression",
-    "polynomial regression ",
-    "data science"
-  ]
+  "keywords": [ ]
 }

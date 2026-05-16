@@ -1,3 +1,22 @@
 body {
   font-family: sans-serif;
+  font-size: 1.5em;
 }
+
+.big {
+  font-size: 2em;
+}
+
+
+div {
+  padding: 1em;
+  justify-content: center;
+  display: block;
+  text-align: center;
+}
+
+.centered {
+  display: flex;
+  justify-content: center;
+}
+
