@@ -61,12 +61,17 @@
           </table>
         </div>
         <div class="centered">
-          <select id="calc_unit" class="big">
-            <option value="m">Meter</option>
-            <option value="yd">Yard</option>
-            <option value="ft">Feet</option>
-          </select>
-          <button id="calculate" class="big">Calculate</button>
+          <div class="centered">
+            <p>Output unit:</p>
+            <select id="calc_unit" class="big">
+              <option value="m">Meter</option>
+              <option value="yd">Yard</option>
+              <option value="ft">Feet</option>
+            </select>
+          </div>
+         <div class="centered">
+            <button id="calculate" class="big">Calculate</button>
+          </div>
         </div>
         <script>
           function addMark(n) {
@@ -101,10 +106,19 @@
             </tbody>
           </table>
         </div>
+        <div id="graph"></div>
+        <div>
+          <div class="centered">
+            <p>Cut angle:</p>
+            <input type="number" id="cut_angle" size="5" value="0" /></td>
+          </div>
+          <div class="centered">
+            <button id="calculate_trajectory" class="big">Calculate trajactory and marks</button>
+          </div>
+        </div>
         <div id="trajectory_canvas_container" class="centered">
           <canvas id="trajectory_canvas"></canvas>
         </div>
-        <div id="graph"></div>
         <div id="calculated">
           <div class="centered">
           <h1>Marks</h1>
@@ -115,6 +129,10 @@
                 <tr>
                   <th>Distance</th>
                   <th>Mark</th>
+                  <th>Velocity At Target (fps)</th>
+                  <th>Drop cm per m</th>
+                  <th>Vertical Turns Per cm</th>
+                  <th>Horizontal Turns Per cm</th>
                 </tr>
               </thead>
               <tbody id="marks"></tbody>
