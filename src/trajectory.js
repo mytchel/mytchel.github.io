@@ -36,39 +36,22 @@ function cutDists(d, cut_angle) {
 // raising the bow raises the peep?
 //
 function angleToMark(sight_settings, a, d, cut_angle) {
-  // let m1 = Math.tan(a) * sight_settings.nock_to_pin;
-
   let [x_target, y_target] = cutDists(d, cut_angle);
 
-  console.log("angle to mark for d " + d + " cut " + cut_angle + " so x " + x_target + " and " + y_target + " a = " + a / radian);
-
-  let eye_x = Math.sin(a) * sight_settings.nock_to_eye + x_target;
-  let eye_y = Math.cos(a) * sight_settings.nock_to_eye - y_target;
-  console.log("eye to target  " + eye_x + " and " + eye_y);
-  // needs to take into acount tilt of eye over nock with a changing.
+  let eye_x = Math.sin(a) * sight_settings.arrow_to_eye + x_target;
+  let eye_y = Math.cos(a) * sight_settings.arrow_to_eye - y_target;
   let o = Math.atan(eye_y / eye_x);
   
-  console.log("o = " + o / radian);
+  let m = Math.tan(a + o) * sight_settings.eye_to_sight;
   
-  let m = Math.tan(a + o) * sight_settings.nock_to_pin;
-  
-  // console.log("m2 = " + m2);
-  
-  // let m = m2 + m1;
-  
-  console.log("m = " + m);
-
   let mm_per_turns = 25.4 / sight_settings.vertical_tpi;
   let mark = m * 1000 / mm_per_turns / sight_settings.sight_scale;
-
-  //  console.log("angle to mark for a " + a.toFixed(5) + " at d " + t.toFixed(0) + " o = " + o.toFixed(3) + " m1 = " + m1.toFixed(3) + " m2 = " + m2.toFixed(3));
 
   return mark;
 }
 
 function markAtDistance(t, d, sight_settings, tpi) {
-  let m = d / t * sight_settings.nock_to_pin;
-  console.log("mark " + d + " at distance " + t + " = at sight " + m);
+  let m = d / t * sight_settings.eye_to_sight;
   let mm_per_turns = 25.4 / tpi;
   return m * 1000 / mm_per_turns;
 }
@@ -416,8 +399,6 @@ function populateMarks(sight_settings, v, c, offset, cut_angle) {
       let verticalMarks = markAtDistance(d, 0.1, sight_settings, sight_settings.vertical_tpi);
       let horizontalMarks = markAtDistance(d, 0.1, sight_settings, sight_settings.horizontal_tpi);
 
-      console.log("mark for " + d + " at (" + x_target + "," + y_target + ") a = " + a + " m = " + m + " impact before " + impactBefore + " and after " + impactAfter);
-
       let distText = document.createTextNode(i.toString() + toUnitName(unit));
       let markText = document.createTextNode(m.toFixed(3));
       let vvText = document.createTextNode((vv / feet_to_m).toFixed(3));
@@ -584,23 +565,55 @@ function marksToM(marks) {
   return data;
 }
 
-function storeValues(sight_settings, marks) {
+var sight_settings = {
+  eye_to_sight: 1020 / 1000,
+  arrow_to_eye: 110 / 1000,
+  vertical_tpi: 24,
+  horizontal_tpi: 32,
+  sight_scale: 10,
+};
+
+var marks = [
+  [18, 'm', 1.02],
+  [30, 'm', 2.43],
+  [50, 'm', 4.85],
+  [70, 'm', 7.7],
+];
+
+var calc_v = 200 / feet_to_m;
+var calc_c = 0.03;
+var calc_offset = 0;
+
+function storeValues() {
   console.log("Storing values");
 
   localStorage.setItem("sight_settings", JSON.stringify(sight_settings));
   localStorage.setItem("marks", JSON.stringify(marks));
 }
 
-function readValues() {
+function readStored() {
   console.log("Reading values");
 
   try {
-    let sight_settings = JSON.parse(localStorage.getItem("sight_settings"));
-    let marks = JSON.parse(localStorage.getItem("marks"));
+    let new_sight_settings = JSON.parse(localStorage.getItem("sight_settings"));
+    let new_marks = JSON.parse(localStorage.getItem("marks"));
 
-    if (sight_settings != null && marks != null) {
-      return [sight_settings, marks];
-    } 
+    if (new_sight_settings == null) {
+      throw new Error("No sight settings");
+    } else if (new_marks == null) {
+      throw new Error("No marks");
+    } else if (new_sight_settings.eye_to_sight == 0 ||
+               new_sight_settings.arrow_to_eye == 0 ||
+               new_sight_settings.vertical_tpi == 0 ||
+               new_sight_settings.horizontal_tpi == 0 ||
+               new_sight_settings.sight_scale == 0) {
+      throw new Error("Sight settings invalid");
+    } else if (!Array.isArray(new_marks)) {
+      throw new Error("Marks are invalid");
+    }
+
+    sight_settings = new_sight_settings;
+    marks = new_marks;
 
   } catch (error) {
     console.log("Error reading sight settings or marks: " + error);
@@ -609,50 +622,35 @@ function readValues() {
     localStorage.removeItem("marks");
   }
 
-  let sight_settings = {
-    nock_to_pin: 1020 / 1000,
-    nock_to_eye: 110 / 1000,
-    vertical_tpi: 24,
-    horizontal_tpi: 32,
-    sight_scale: 10,
-  };
-
-  let marks = [
-    [18, 'm', 1.02],
-    [30, 'm', 2.43],
-    [50, 'm', 4.85],
-    [70, 'm', 7.7],
-  ];
-
   storeValues(sight_settings, marks);
-
-  return [sight_settings, marks];
 }
 
-var calc_v = 200 / feet_to_m;
-var calc_c = 0.03;
-var calc_offset = 0;
+function readValues() {
+  readStored();
 
-function calculate() {
-  console.log("Recalculating");
-
-  let sight_settings = {
-    nock_to_pin: document.getElementById('nock_to_pin').value / 1000,
-    nock_to_eye: document.getElementById('nock_to_eye').value / 1000,
+  sight_settings = {
+    eye_to_sight: document.getElementById('eye_to_sight').value / 1000,
+    arrow_to_eye: document.getElementById('arrow_to_eye').value / 1000,
     vertical_tpi: document.getElementById('sight_tpi_vertical').value,
     horizontal_tpi: document.getElementById('sight_tpi_horizontal').value,
     sight_scale: document.getElementById('sight_scale').value,
   };
 
   var table = document.getElementById('input_marks');
-  let marks = readMarks(table, sight_settings);
+  
+  marks = readMarks(table, sight_settings);
 
-  storeValues(sight_settings, marks);
+  storeValues();
+}
+
+function calculate() {
+  console.log("Recalculating");
+
+  readValues();
 
   let data = marksToM(marks);
 
   let [v, c] = findVelocityAndDrag(sight_settings, data);
-  // let [v, c] = [ 200 * feet_to_m, 0.03];
 
   let [offset, gradient, score] = calcOffset(sight_settings, data, v, c);
 
@@ -683,9 +681,9 @@ document.getElementById("calculate").onclick = function() {
 
 document.getElementById("calculate_trajectory").onclick = function() {
   try {
-    let cut_angle = (document.getElementById("cut_angle").value * Math.PI) / 180;
+    calculate();
 
-    let [sight_settings, marks] = readValues();
+    let cut_angle = (document.getElementById("cut_angle").value * Math.PI) / 180;
 
     drawTrajectories(calc_v, calc_c, calc_offset, cut_angle);
     populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle);
@@ -696,16 +694,13 @@ document.getElementById("calculate_trajectory").onclick = function() {
 };
 
 function setDefaults() {
-  let [sight_settings, marks] = readValues();
-
-  console.log("Have sight settings: " + sight_settings);
-  console.log("Have marks: " + marks);
+  readStored();
 
   document.getElementById('sight_tpi_vertical').value = sight_settings.vertical_tpi;
   document.getElementById('sight_tpi_horizontal').value = sight_settings.horizontal_tpi;
   document.getElementById('sight_scale').value = sight_settings.sight_scale;
-  document.getElementById('nock_to_pin').value = sight_settings.nock_to_pin * 1000;
-  document.getElementById('nock_to_eye').value = sight_settings.nock_to_eye * 1000;
+  document.getElementById('eye_to_sight').value = sight_settings.eye_to_sight * 1000;
+  document.getElementById('arrow_to_eye').value = sight_settings.arrow_to_eye * 1000;
 
   var defaultMarks = document.getElementById('input_marks');
 
