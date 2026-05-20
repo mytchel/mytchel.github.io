@@ -5,7 +5,7 @@
   "description": "Sight Mark Calculator",
   "main": "index.html",
   "scripts": {
-    "start": "parcel index.html --open",
+    "start": "parcel ./src/index.html --open",
     "prebuild": "shx rm -rf dist/*",
     "build": "parcel build ./src/index.html --public-url ./",
     "push-gh-pages": "push-dir --dir=dist --branch=gh-pages --cleanup --verbose"

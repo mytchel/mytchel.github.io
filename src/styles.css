@@ -11,6 +11,14 @@ input, select {
   font-size: 1.2em;
 }
 
+input[type=number] {
+  -webkit-appearance: textfield;
+  -moz-appearance:    textfield;
+  appearance:         textfield;
+  text-align: right; 
+  width: 4em;
+}
+
 div {
   padding: 1em;
   justify-content: center;
@@ -25,5 +33,10 @@ div {
 
 #graph {
   height: 400px;
+}
+
+td, th {
+  text-align: left; 
+  padding: 10px;
 }
 

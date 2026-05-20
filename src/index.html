@@ -12,14 +12,6 @@
           <table id="sight settings">
             <tbody id="sight_settings">
               <tr>
-                <td>Sight TPI Vertical</td>
-                <td><input type="number" id="sight_tpi_vertical" size="3" required /></td>
-              </tr>
-              <tr>
-                <td>Sight TPI Horizontal</td>
-                <td><input type="number" id="sight_tpi_horizontal" size="3" required /></td>
-              </tr>
-              <tr>
                 <td>Sight Scale</td>
                 <td>
                   <select id="sight_scale">
@@ -29,12 +21,20 @@
                 </td>
               </tr>
               <tr>
-                <td>Nock to Sight (mm)</td>
-                <td><input type="number" id="nock_to_pin" size="5" required /></td>
+                <td>Sight TPI Vertical</td>
+                <td><input type="number" id="sight_tpi_vertical" class="input-measure" required /></td>
               </tr>
               <tr>
-                <td>Nock to Eye (mm)</td>
-                <td><input type="number" id="nock_to_eye" size="5" required /></td>
+                <td>Sight TPI Horizontal</td>
+                <td><input type="number" id="sight_tpi_horizontal" class="input-measure" required /></td>
+              </tr>
+              <tr>
+                <td>Nock/Peep to Sight (mm)</td>
+                <td><input type="number" id="nock_to_pin" class="input-measure" required /></td>
+              </tr>
+              <tr>
+                <td>Arrow to Eye/Peep (mm)</td>
+                <td><input type="number" id="nock_to_eye" class="input-measure" required /></td>
               </tr>
             </tbody>
           </table>
@@ -49,8 +49,8 @@
             </thead>
             <tbody id="input_marks">
               <tr>
-                <td><input type="number" name="dist" size="4" /></td>
-                <td><input type="number" name="mark" size="5" /></td>
+                <td><input type="number" name="dist" class="input-dist"></td>
+                <td><input type="number" name="mark" class="input-mark"></td>
                 <td>
                   <select>
                     <option value="m">Meter</option>
@@ -66,11 +66,10 @@
         </div>
         <div class="centered">
           <div class="centered">
-            <p>Output unit:</p>
             <select id="calc_unit" class="big">
-              <option value="m">Meter</option>
-              <option value="yd">Yard</option>
-              <option value="ft">Feet</option>
+              <option value="m">Output Meters</option>
+              <option value="yd">Output Yards</option>
+              <option value="ft">Output Feet</option>
             </select>
           </div>
          <div class="centered">
@@ -114,10 +113,10 @@
         <div>
           <div class="centered">
             <p>Cut angle:</p>
-            <input type="number" id="cut_angle" size="5" value="0" /></td>
+            <input type="number" id="cut_angle"  class="input-measure" value="0" /></td>
           </div>
           <div class="centered">
-            <button id="calculate_trajectory" class="big">Calculate trajactory and marks</button>
+            <button id="calculate_trajectory" class="big">Calculate Trajactory and Marks</button>
           </div>
         </div>
         <div id="trajectory_canvas_container" class="centered">
