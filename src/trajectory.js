@@ -58,12 +58,19 @@ function angleToMark(sight_settings, a, d, cut_angle) {
   
   console.log("m = " + m);
 
-  let mm_per_turns = 25.4 / sight_settings.tpi;
+  let mm_per_turns = 25.4 / sight_settings.vertical_tpi;
   let mark = m * 1000 / mm_per_turns / sight_settings.sight_scale;
 
   //  console.log("angle to mark for a " + a.toFixed(5) + " at d " + t.toFixed(0) + " o = " + o.toFixed(3) + " m1 = " + m1.toFixed(3) + " m2 = " + m2.toFixed(3));
 
   return mark;
+}
+
+function markAtDistance(t, d, sight_settings, tpi) {
+  let m = d / t * sight_settings.nock_to_pin;
+  console.log("mark " + d + " at distance " + t + " = at sight " + m);
+  let mm_per_turns = 25.4 / tpi;
+  return m * 1000 / mm_per_turns;
 }
 
 function calc(v, c, a, t) {
@@ -279,7 +286,7 @@ function drawTrajectory(ctx, x_scale, y_scale, launch_x, launch_y, unit, h, v, c
 }
 
 function drawTrajectories(v, c, offset, cut_angle) {
-  let dists = [3, 18, 20, 30, 50, 70, 90];
+  let dists = [5, 18, 30, 50, 70, 90];
 
   let unit = toScale(document.getElementById("calc_unit").value);
 
@@ -393,13 +400,12 @@ function populateMarks(sight_settings, v, c, offset, cut_angle) {
 
   table.innerHTML = "";
 
-  for (let i = 1; i <= 50; i += 1) {
+  for (let i = 1; i <= 120; i += 1) {
     try {
       let d = i * unit;
 
       let [a, vv] = findAngle(v, c, d, cut_angle);
-      let m = angleToMark(sight_settings, a, d, cut_angle);
-      let actual = m + offset;
+      let m = angleToMark(sight_settings, a, d, cut_angle) + offset;
 
       let [x_target, y_target] = cutDists(d, cut_angle);
 
@@ -407,22 +413,31 @@ function populateMarks(sight_settings, v, c, offset, cut_angle) {
       let impactAfter = findImpact(v, c, a, x_target + 0.5)[0];
       let drop = impactAfter - impactBefore;
 
-      console.log("mark for " + d + " at (" + x_target + "," + y_target + ") a = " + a + " m = " + actual + " impact before " + impactBefore + " and after " + impactAfter);
+      let verticalMarks = markAtDistance(d, 0.1, sight_settings, sight_settings.vertical_tpi);
+      let horizontalMarks = markAtDistance(d, 0.1, sight_settings, sight_settings.horizontal_tpi);
+
+      console.log("mark for " + d + " at (" + x_target + "," + y_target + ") a = " + a + " m = " + m + " impact before " + impactBefore + " and after " + impactAfter);
 
       let distText = document.createTextNode(i.toString() + toUnitName(unit));
-      let markText = document.createTextNode(actual.toFixed(3));
+      let markText = document.createTextNode(m.toFixed(3));
       let vvText = document.createTextNode((vv / feet_to_m).toFixed(3));
       let dropText = document.createTextNode((drop * 100).toFixed(1) + "cm");
+      let verticalMarkText = document.createTextNode(verticalMarks.toFixed(2));
+      let horizontalMarkText = document.createTextNode(horizontalMarks.toFixed(2));
 
       var newRow = table.insertRow(table.rows.length);
       var distCell = newRow.insertCell(0);
-      var markCell = newRow.insertCell(1);
-      var vvCell = newRow.insertCell(2);
-      var dropCell = newRow.insertCell(3);
       distCell.appendChild(distText);
+      var markCell = newRow.insertCell(1);
       markCell.appendChild(markText);
+      var vvCell = newRow.insertCell(2);
       vvCell.appendChild(vvText);
+      var dropCell = newRow.insertCell(3);
       dropCell.appendChild(dropText);
+      var verticalMarkCell = newRow.insertCell(4);
+      verticalMarkCell.appendChild(verticalMarkText);
+      var horizontalMarkCell = newRow.insertCell(5);
+      horizontalMarkCell.appendChild(horizontalMarkText);
     } catch (error) {
       console.log(error);
       break;
@@ -587,7 +602,9 @@ function readValues() {
       return [sight_settings, marks];
     } 
 
-  } catch {
+  } catch (error) {
+    console.log("Error reading sight settings or marks: " + error);
+
     localStorage.removeItem("sight_settings");
     localStorage.removeItem("marks");
   }
@@ -595,7 +612,8 @@ function readValues() {
   let sight_settings = {
     nock_to_pin: 1020 / 1000,
     nock_to_eye: 110 / 1000,
-    tpi: 24,
+    vertical_tpi: 24,
+    horizontal_tpi: 32,
     sight_scale: 10,
   };
 
@@ -621,7 +639,8 @@ function calculate() {
   let sight_settings = {
     nock_to_pin: document.getElementById('nock_to_pin').value / 1000,
     nock_to_eye: document.getElementById('nock_to_eye').value / 1000,
-    tpi: document.getElementById('sight_tpi').value,
+    vertical_tpi: document.getElementById('sight_tpi_vertical').value,
+    horizontal_tpi: document.getElementById('sight_tpi_horizontal').value,
     sight_scale: document.getElementById('sight_scale').value,
   };
 
@@ -682,7 +701,8 @@ function setDefaults() {
   console.log("Have sight settings: " + sight_settings);
   console.log("Have marks: " + marks);
 
-  document.getElementById('sight_tpi').value = sight_settings.tpi;
+  document.getElementById('sight_tpi_vertical').value = sight_settings.vertical_tpi;
+  document.getElementById('sight_tpi_horizontal').value = sight_settings.horizontal_tpi;
   document.getElementById('sight_scale').value = sight_settings.sight_scale;
   document.getElementById('nock_to_pin').value = sight_settings.nock_to_pin * 1000;
   document.getElementById('nock_to_eye').value = sight_settings.nock_to_eye * 1000;
