@@ -1,12 +1,14 @@
 {
-  "name": "Sight Marks Calculator",
+  "name": "sight-marks",
   "version": "1.0.0",
   "author": "Mytchel Hammond",
   "description": "Sight Mark Calculator",
   "main": "index.html",
   "scripts": {
     "start": "parcel index.html --open",
-    "build": "parcel build index.html"
+    "prebuild": "shx rm -rf dist/*",
+    "build": "parcel build ./src/index.html --public-url ./",
+    "push-gh-pages": "push-dir --dir=dist --branch=gh-pages --cleanup --verbose"
   },
   "dependencies": {
     "highcharts": "^8.0.4",
@@ -14,7 +16,9 @@
   },
   "devDependencies": {
     "@babel/core": "7.2.0",
-    "parcel-bundler": "^1.6.1"
+    "parcel-bundler": "^1.6.1",
+    "shx": "^0.3.2",
+    "push-dir": "^0.4.1"
   },
   "keywords": [ ]
 }
