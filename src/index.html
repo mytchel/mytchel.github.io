@@ -116,12 +116,15 @@
             <input type="number" id="cut_angle"  class="input-measure" value="0" /></td>
           </div>
           <div class="centered">
-            <button id="calculate_trajectory" class="big">Calculate Trajactory and Marks</button>
+            <button id="calculate_trajectory" class="big">Calculate Trajactory</button>
           </div>
         </div>
         <div id="trajectory_canvas_container" class="centered">
           <canvas id="trajectory_canvas"></canvas>
         </div>
+          <div class="centered">
+            <button id="calculate_marks" class="big">Calculate Marks</button>
+          </div>
         <div id="calculated">
           <div class="centered">
           <h1>Marks</h1>
@@ -133,6 +136,7 @@
                   <th>Distance</th>
                   <th>Mark</th>
                   <th>Velocity At Target (fps)</th>
+                  <th>Time To Target (s)</th>
                   <th>Drop cm per m</th>
                   <th>Vertical Turns Per 10 cm</th>
                   <th>Horizontal Turns Per 10 cm</th>

@@ -7,18 +7,20 @@ let yard_to_m = 0.9144;
 
 let g = 9.80665;
 
-let t_step = 0.001;
-let c_step = 0.0001;
-let y_error = 0.0001;
-let x_error = 0.0001;
-let v_error = 0.0001 * feet_to_m;
-let c_error = 0.000001
+let y_error = 0.001;
+let y_estimate_error = 0.1;
+let x_estimate_error = 0.5;
+let v_error = 0.1 * feet_to_m;
+let c_error = 0.0001;
+let calc_min_t_step = 0.00001;
+let calc_steps = 500;
 let tries = 100;
 
-let v_guess = 200
-let c_guess = 0.03
+let absolute_minimum_v = 50 * feet_to_m;
+let absolute_c_max = 0.3;
 
-let drag_coefficient = 0.03;
+let angle_estimate_range = 45;
+let angle_range = 0.75;
 
 function cutDists(d, cut_angle) {
   let x_target = Math.cos(cut_angle) * d;
@@ -56,29 +58,57 @@ function markAtDistance(t, d, sight_settings, tpi) {
   return m * 1000 / mm_per_turns;
 }
 
-function calc(v, c, a, t) {
-  let vv = v * Math.pow(Math.E, -c * t);
-  let x = (vv * t * Math.cos(a));
-  let y = (vv * t * Math.sin(a)) - (0.5 * g * Math.pow(t,2)); 
+function calc(v, c, a, d, f) {
+  // console.log(`calc path ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${(a / radian).toFixed(3)}`);
 
-  return [x, y, vv];
+  var t = 0;
+  var x = 0;
+  var y = 0;
+  var vx = v * Math.cos(a);
+  var vy = v * Math.sin(a);
+
+  while (x < d) {
+    var step = Math.max(calc_min_t_step, (d - x) / calc_steps / vx);
+
+    t += step;
+    x += vx * step;
+    y += vy * step;
+
+    if (!f([x, y, vx, vy, t])) {
+      break;
+    }
+
+    let drag = Math.pow(Math.E, -c * step);
+    vx = vx * drag;
+    vy = vy * drag - g * step;
+   
+    if (vx < absolute_minimum_v) {
+      throw new Error(`Failed to calc path ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${(a / radian).toFixed(3)}: vx too low`);
+    }
+  }
 }
 
 function estimateT(v, a, x) {
   return x / (v * Math.cos(a));
 }
 
-function findImpact(v, c, a, d) {
+function estimateImpact(v, c, a, d) {
+  // console.log(`estimate impact ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${(a / radian).toFixed(3)}`);
+
   let t_guess = estimateT(v, a, d);
 
   var t_max = t_guess * 1.2;
   var t_min = t_guess * 0.8;
   var t = t_guess;
   for (let j = 0; j < tries; j++) {
-    var [x, y, vv] = calc(v, c, a, t);
+    let vv = v * Math.pow(Math.E, -c * t);
+    let x = (vv * t * Math.cos(a));
+    let y = (vv * t * Math.sin(a)) - (0.5 * g * Math.pow(t,2)); 
 
-    if (Math.abs(x - d) < x_error) {
-      return [y, vv];
+    if (Math.abs(x - d) < x_estimate_error) {
+      return y;
+    } else if (t_min == t_max) {
+      throw new Error(`Failed to find estimate for impact: ${d} narrowed to zero range`);
     } else if (x < d) {
       t_min = t;
     } else {
@@ -88,23 +118,25 @@ function findImpact(v, c, a, d) {
     t = t_min + (t_max - t_min) / 2;
   }
 
-  return [0, 0]; 
+  throw new Error(`Failed to estimate imapct for distance: ${d} exceeded max tries`);
 }
 
-function findAngle(v, c, d, cut_angle) {
-  let [x_target, y_target] = cutDists(d, cut_angle);
+function estimateAngle(v, c, d, cut_angle) {
+  // console.log(`estimate angle ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${cut_angle}`);
 
   var a = cut_angle * radian;
-  var a_min = a - 90 * radian;
-  var a_max = a + 90 * radian;
+  var a_min = a - angle_estimate_range * radian;
+  var a_max = a + angle_estimate_range * radian;
+
+  let [x_target, y_target] = cutDists(d, cut_angle);
 
   for (let i = 0; i < tries; i++) {
-    let [y, vv] = findImpact(v, c, a, x_target);
+    let y = estimateImpact(v, c, a, x_target);
 
-    if (Math.abs(y - y_target) < y_error) {
-      // console.log("found angle " + a + " for distance " + d + " after " + i + " tries");
-      return [a, vv];
-
+    if (Math.abs(y - y_target) < y_estimate_error) {
+      return a;
+    } else if (a_min == a_max) {
+      throw new Error(`Failed to find estimate for distance: ${d} narrowed to zero range`);
     } else if (y < y_target) {
       a_min = a;
     } else {
@@ -114,20 +146,64 @@ function findAngle(v, c, d, cut_angle) {
     a = a_min + (a_max - a_min) / 2;
   }
 
-  throw new Error("Failed to find angle for distance: " + d);
+  throw new Error(`Failed to estimate angle for distance: ${d} exceeded max tries`);
+}
+
+function findImpact(v, c, a, d) {
+  // console.log(`find impact ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${(a/radian).toFixed(3)}`);
+
+  var end = [];
+  let f = function(p) {
+    end = p;
+    return true;
+  };
+  
+  calc(v, c, a, d, f);
+  let [x, y, vx, vy, t] = end;
+  let vv = Math.sqrt(vx*vx + vy*vy);
+  return [y, vv, t];
+}
+
+function findAngle(v, c, d, cut_angle, a_guess) {
+  // console.log(`find angle ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${cut_angle}`);
+
+  var a = a_guess;
+  var a_min = a - angle_range * radian;
+  var a_max = a + angle_range * radian;
+
+  let [x_target, y_target] = cutDists(d, cut_angle);
+
+  for (let i = 0; i < tries; i++) {
+    let [y, vv, t] = findImpact(v, c, a, x_target);
+
+    if (Math.abs(y - y_target) < y_error) {
+      return a;
+    } else if (a_min == a_max) {
+      throw new Error(`Failed to find angle for distance: ${d} narrowed to zero range`);
+    } else if (y < y_target) {
+      a_min = a;
+    } else {
+      a_max = a;
+    }
+      
+    a = a_min + (a_max - a_min) / 2;
+  }
+
+  throw new Error(`Failed to find angle for distance: ${d} exceeded max tries`);
 }
 
 function calcOffset(sight_settings, data, v, c) {
+  console.log(`calc offset ${(v / feet_to_m).toFixed(3)} ${c.toFixed(4)}`);
+
   var errors = [];
   for (let i = 0; i < data.length; i++) {
     let [d, m] = data[i];
-    let [a, vv] = findAngle(v, c, d, 0);
+    var a_guess = estimateAngle(v, c, d, 0);
+    let a = findAngle(v, c, d, 0, a_guess);
     let m_calc = angleToMark(sight_settings, a, d, 0);
     let diff = m - m_calc;
    
     errors.push([d, diff]);
-    
-    // console.log("error for " + v / feet_to_m + " at " + d + " = " + m + " vs calc " + m_calc + " = " + diff);
   }
 
   let result = regression.linear(errors, { precision: 10 } );
@@ -145,60 +221,59 @@ function calcOffset(sight_settings, data, v, c) {
   return [ offset, gradient, score ];
 }
 
-function findVelocity(sight_settings, data, c) {
-  var v = v_guess * feet_to_m;
-  let v_max = v * 2;
-  let v_min = v * 0.7;
+function findVelocity(sight_settings, data, c, v_min, v_max) {
+  console.log(`FIND VELOCITY ${c.toFixed(4)}`);
 
   for (let i = 0; i < tries; i++) {
-    let [offset, gradient, score] = calcOffset(sight_settings, data, v, c);
+    let v = v_min + (v_max - v_min) / 2;
 
-    // console.log("test v " + v / feet_to_m + " offset " + offset + " gradient " + gradient);
+    try {
+      let [offset, gradient, score] = calcOffset(sight_settings, data, v, c);
 
-    if (gradient < 0) {
+      if (v_max - v_min < v_error) {
+        return v;
+      } else if (gradient < 0) {
+        v_min = v;
+      } else {
+        v_max = v;
+      }
+
+    } catch (error) {
+      console.log(error);
       v_min = v;
-    } else {
-      v_max = v;
-    }
-
-    v = v_min + (v_max - v_min) / 2;
-
-    if (v_max - v_min < v_error) {
-      // console.log("v range below error " + v_min + " to " + v_max);
-      return v;
     }
   }
 
-  throw new Error("Failed to find velocity for c = " + c);
+  throw new Error(`Failed to find velocity for c = ${c.toFixed(4)} : exceeded max tries`);
 }
 
 function findVelocityAndDrag(sight_settings, data) {
+  console.log("FIND VELOCITY AND DRAG");
+
+  var c_best = 0;
+
+  var v_best = findVelocity(sight_settings, data, c_best, 
+      100 * feet_to_m, 
+      350 * feet_to_m);
+
   if (data.length < 3) {
     console.log("Not enought data points for proper drag calculation");
-    let c = 0.05;
-    let v = findVelocity(sight_settings, data, c);
-    return [v, c];
+    return [v_best, c_best];
   }
 
-  let v_best = 0;
-  let c_best = 0;
   let error_best = 1000;
 
   let c_min = 0;
-  let c_max = c_guess * 10;
+  let c_max = absolute_c_max;
 
   while (c_max - c_min > c_error) {
     let c_step = (c_max - c_min) / 10;
 
-    console.log("check from " + c_min + " to " + c_max + " each " + c_step);
-
     for (let c = c_min; c < c_max; c += c_step) {
       try {
-        let v = findVelocity(sight_settings, data, c);
+        let v = findVelocity(sight_settings, data, c, v_best * 0.8, v_best * 1.2);
 
         let [offset, gradient, score] = calcOffset(sight_settings, data, v, c);
-
-        console.log("c = " + c + " then v = " + v / feet_to_m + " score = " + score);
 
         let error = score 
         if (error < error_best) {
@@ -209,7 +284,7 @@ function findVelocityAndDrag(sight_settings, data) {
 
       } catch (error) {
         console.log(error);
-        continue;
+        break;
       }
     }
 
@@ -228,36 +303,46 @@ function findVelocityAndDrag(sight_settings, data) {
 function maxHeight(v, c, d, cut_angle) {
   var max = 0;
 
-  let [x_target, y_target] = cutDists(d, cut_angle);
-  let [a, vv] = findAngle(v, c, d, cut_angle);
+  var a_guess = estimateAngle(v, c, d, cut_angle);
+  let a = findAngle(v, c, d, cut_angle, a_guess);
 
-  for (let t = 0; t < 10; t += t_step) {
-    let [x, y] = calc(v, c, a, t);
-
-    if (x > x_target + x_error) break;
-    if (y > max) {
+  let f = function (p) {
+    let y = p[1];
+    if (y >= max) {
       max = y;
+      return true;
+    } else {
+      return false;
     }
   }
+
+  calc(v, c, a, d, f);
 
   return max;
 }
 
 function drawTrajectory(ctx, x_scale, y_scale, launch_x, launch_y, unit, h, v, c, d, cut_angle) {
   let [x_target, y_target] = cutDists(d * unit, cut_angle);
-  let [a, vv] = findAngle(v, c, d * unit, cut_angle);
-
+  
   ctx.beginPath();
   ctx.moveTo(launch_x, launch_y);
 
-  for (let t = 0; t < 10; t += t_step) {
-    let [x, y] = calc(v, c, a, t);
-
-    if (x > x_target + x_error) break;
+  let f = function (p) {
+    let x = p[0];
+    let y = p[1];
 
     ctx.lineTo(launch_x + x * x_scale, launch_y - y * y_scale);
+
+    return true;
   }
 
+  var a_guess = estimateAngle(v, c, d * unit, cut_angle);
+  let a = findAngle(v, c, d * unit, cut_angle, a_guess);
+
+  console.log(`Draw trajectory ${d} with angle ${(a/radian).toFixed(3)}`);
+
+  calc(v, c, a, d * unit, f);
+  
   ctx.stroke();
 
   const target = new Path2D();
@@ -269,6 +354,8 @@ function drawTrajectory(ctx, x_scale, y_scale, launch_x, launch_y, unit, h, v, c
 }
 
 function drawTrajectories(v, c, offset, cut_angle) {
+  console.log("Draw trajectories");
+
   let dists = [5, 18, 30, 50, 70, 90];
 
   let unit = toScale(document.getElementById("calc_unit").value);
@@ -281,34 +368,25 @@ function drawTrajectories(v, c, offset, cut_angle) {
 
   for (let i = dists.length - 1; i >= 0; i--) {
     try {
-      console.log("Try get max height for " + dists[i]);
       let x = dists[i] * unit;
       max_y = maxHeight(v, c, x, cut_angle);
       let [x_target, y_target] = cutDists(x, cut_angle);
       max_x = x_target;
       min_y = Math.min(0, y_target);
+      console.log(`Found max dist ${x} target at ${max_x}, max y ${max_y}, min y ${min_y}`);
       break;
     } catch (error) {
       console.log("Failed to get max height for " + dists[i] + " : " + error);
     }
   }
 
-  console.log("max x = " + max_x + " max y = " + max_y + " min y = " + min_y);
-
   var rect = canvas.parentNode.getBoundingClientRect();
   
-  let x_scale = rect.width / (max_x + 20);
+  let x_scale = rect.width / (max_x + 10);
   let y_scale = 30;
 
   canvas.width = rect.width;
   canvas.height = (2 + max_y - min_y) * y_scale + 100;
-
-  console.log("max x = " + max_x);
-  console.log("max y = " + max_y);
-  console.log("x scale = " + x_scale);
-  console.log("y scale = " + y_scale);
-  console.log("width = " + canvas.width);
-  console.log("height = " + canvas.height);
 
   let bottom = canvas.height;
 
@@ -343,6 +421,8 @@ function drawTrajectories(v, c, offset, cut_angle) {
   ctx.textBaseline = "top";
   for (let i = 0; i < dists.length; i++) {
     let d = dists[i];
+    let [x_target, y_target] = cutDists(d * unit, cut_angle);
+    if (x_target > max_x) continue;
 
     try {
       drawTrajectory(ctx, x_scale, y_scale, launch_x, launch_y, unit, h, v, c, d, cut_angle);
@@ -377,48 +457,55 @@ function toUnitName(scale) {
 }
 
 function populateMarks(sight_settings, v, c, offset, cut_angle) {
+  console.log("Populate marks");
+
   let unit = toScale(document.getElementById("calc_unit").value);
   
   var table = document.getElementById('marks');
 
   table.innerHTML = "";
 
+  var a_guess = estimateAngle(v, c, 1 * unit, cut_angle);
+
   for (let i = 1; i <= 120; i += 1) {
     try {
       let d = i * unit;
 
-      let [a, vv] = findAngle(v, c, d, cut_angle);
+      let a = findAngle(v, c, d, cut_angle, a_guess);
+
+      a_guess = a;
+
       let m = angleToMark(sight_settings, a, d, cut_angle) + offset;
 
       let [x_target, y_target] = cutDists(d, cut_angle);
 
+      let [y, vv, t] = findImpact(v, c, a, x_target);
+     
       let impactBefore = findImpact(v, c, a, x_target - 0.5)[0];
       let impactAfter = findImpact(v, c, a, x_target + 0.5)[0];
-      let drop = impactAfter - impactBefore;
+      let drop = impactBefore - impactAfter;
 
       let verticalMarks = markAtDistance(d, 0.1, sight_settings, sight_settings.vertical_tpi);
       let horizontalMarks = markAtDistance(d, 0.1, sight_settings, sight_settings.horizontal_tpi);
 
-      let distText = document.createTextNode(i.toString() + toUnitName(unit));
-      let markText = document.createTextNode(m.toFixed(3));
-      let vvText = document.createTextNode((vv / feet_to_m).toFixed(3));
-      let dropText = document.createTextNode((drop * 100).toFixed(1) + "cm");
-      let verticalMarkText = document.createTextNode(verticalMarks.toFixed(2));
-      let horizontalMarkText = document.createTextNode(horizontalMarks.toFixed(2));
+      let cells = [
+        document.createTextNode(i.toString() + toUnitName(unit)),
+        document.createTextNode(m.toFixed(3)),
+        document.createTextNode((vv / feet_to_m).toFixed(1) + "fps"),
+        document.createTextNode(t.toFixed(3) + "s"),
+        document.createTextNode((drop * 100).toFixed(1) + "cm"),
+        document.createTextNode(verticalMarks.toFixed(2) + " turns"),
+        document.createTextNode(horizontalMarks.toFixed(2) + " turns")];
+
+      let cells = [distText, markText, vvText, timeText, dropText, verticalMarkText, horizontalMarkText];
 
       var newRow = table.insertRow(table.rows.length);
-      var distCell = newRow.insertCell(0);
-      distCell.appendChild(distText);
-      var markCell = newRow.insertCell(1);
-      markCell.appendChild(markText);
-      var vvCell = newRow.insertCell(2);
-      vvCell.appendChild(vvText);
-      var dropCell = newRow.insertCell(3);
-      dropCell.appendChild(dropText);
-      var verticalMarkCell = newRow.insertCell(4);
-      verticalMarkCell.appendChild(verticalMarkText);
-      var horizontalMarkCell = newRow.insertCell(5);
-      horizontalMarkCell.appendChild(horizontalMarkText);
+
+      for (let cell = 0; cell < cells.length; cell++) {
+        var newCell = newRow.insertCell(cell);
+        newCell.appendChild(cells[cell]);
+      }
+
     } catch (error) {
       console.log(error);
       break;
@@ -427,20 +514,27 @@ function populateMarks(sight_settings, v, c, offset, cut_angle) {
 }
 
 function graphMarks(div, sight_settings, v, c, offset, measured) {
-  console.log("graphing");
-  console.log(sight_settings.sight_scale);
+  console.log("Graphing");
   
   let unit = toScale(document.getElementById("calc_unit").value);
 
   var data = [];
 
+  var a_guess = estimateAngle(v, c, 1 * unit, 0);
+
   for (let i = 1; i <= 120; i += 0.25) {
     try {
       let d = i * unit;
 
-      let [a, vv] = findAngle(v, c, d, 0);
+      let a = findAngle(v, c, d, 0, a_guess);
+      a_guess = a;
+
       let m = angleToMark(sight_settings, a, d, 0);
       let actual = m + offset;
+
+      if (d > measured[measured.length-1][0] && actual > 100 / sight_settings.sight_scale) {
+        break;
+      }
 
       data.push([i, actual]);
     } catch (error) {
@@ -452,7 +546,6 @@ function graphMarks(div, sight_settings, v, c, offset, measured) {
   var measuredInUnit = [];
   for (let i = 0; i < measured.length; i++) {
     measuredInUnit.push([measured[i][0] / unit, measured[i][1]]);
-    console.log(measured[i]);
   }
 
   Highcharts.chart(div, {
@@ -524,7 +617,7 @@ function readMarks(table, sight_settings) {
     const mark = parseFloat(cells[1].querySelector("input")?.value);
     const unit = cells[2].querySelector("select")?.value;
 
-    console.log("Have mark for " + dist + unit + " = " + mark);
+    console.log(`Have mark for ${dist} ${unit} = ${mark}`);
 
     if (isNaN(dist)) {
       throw new Error("Invalid input data: distance not a number: " + cells[0].querySelector("input")?.value);
@@ -659,16 +752,15 @@ function calculate() {
   calc_offset = offset;
 
   let v_fps = v / feet_to_m;
-  document.getElementById("velocity").innerText = v_fps.toFixed(3) + " fps";
+  document.getElementById("velocity").innerText = v_fps.toFixed(1) + " fps";
   document.getElementById("drag").innerText = c.toFixed(5);
   document.getElementById("fit_score").innerText = score.toFixed(5);
 
   graphMarks("graph", sight_settings, v, c, offset, data, 0);
 
-  let cut_angle = (document.getElementById("cut_angle").value * Math.PI) / 180;
-
-  drawTrajectories(calc_v, calc_c, calc_offset, cut_angle);
-  populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle);
+  // let cut_angle = (document.getElementById("cut_angle").value * Math.PI) / 180;
+  // drawTrajectories(calc_v, calc_c, calc_offset, cut_angle);
+  // populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle);
 }
 
 document.getElementById("calculate").onclick = function() {
@@ -681,11 +773,25 @@ document.getElementById("calculate").onclick = function() {
 
 document.getElementById("calculate_trajectory").onclick = function() {
   try {
-    calculate();
+    // TODO: check if it needs to calculate again
+    //     calculate();
 
     let cut_angle = (document.getElementById("cut_angle").value * Math.PI) / 180;
 
     drawTrajectories(calc_v, calc_c, calc_offset, cut_angle);
+
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+document.getElementById("calculate_marks").onclick = function() {
+  try {
+    // TODO: check if it needs to calculate again
+    //     calculate();
+
+    let cut_angle = (document.getElementById("cut_angle").value * Math.PI) / 180;
+
     populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle);
 
   } catch (error) {
@@ -719,5 +825,6 @@ function setDefaults() {
 }
 
 setDefaults();
-calculate();
+// calculate();
+
 
