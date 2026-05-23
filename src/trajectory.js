@@ -1,7 +1,7 @@
 import regression from "regression";
 import Highcharts from "highcharts";
 
-let radian = 0.01745329;
+let radian = Math.PI / 180;
 let feet_to_m = 0.3048;
 let yard_to_m = 0.9144;
 
@@ -11,16 +11,16 @@ let y_error = 0.001;
 let y_estimate_error = 0.1;
 let x_estimate_error = 0.5;
 let v_error = 0.1 * feet_to_m;
-let c_error = 0.0001;
+let c_error = 0.000001;
 let calc_min_t_step = 0.00001;
 let calc_steps = 500;
 let tries = 100;
 
-let absolute_minimum_v = 50 * feet_to_m;
+let absolute_minimum_v = 25 * feet_to_m;
 let absolute_c_max = 0.3;
 
 let angle_estimate_range = 45;
-let angle_range = 0.75;
+let angle_range = 1;
 
 function cutDists(d, cut_angle) {
   let x_target = Math.cos(cut_angle) * d;
@@ -61,6 +61,7 @@ function markAtDistance(t, d, sight_settings, tpi) {
 function calc(v, c, a, d, f) {
   // console.log(`calc path ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${(a / radian).toFixed(3)}`);
 
+  let m = 0.0221;
   var t = 0;
   var x = 0;
   var y = 0;
@@ -78,11 +79,17 @@ function calc(v, c, a, d, f) {
       break;
     }
 
-    let drag = Math.pow(Math.E, -c * step);
-    vx = vx * drag;
-    vy = vy * drag - g * step;
+    let v = Math.sqrt(vx * vx + vy * vy);
+
+    // let ax = (-c * v * vx) / m;
+    // let ay = (-c * v * vy - (g * m)) / m;
+    let ax = -c * v * vx;
+    let ay = -c * v * vy - g;
+
+    vx += ax * step;
+    vy += ay * step;
    
-    if (vx < absolute_minimum_v) {
+    if (v < absolute_minimum_v || vx < 1 * feet_to_m) {
       throw new Error(`Failed to calc path ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${(a / radian).toFixed(3)}: vx too low`);
     }
   }
@@ -122,11 +129,11 @@ function estimateImpact(v, c, a, d) {
 }
 
 function estimateAngle(v, c, d, cut_angle) {
-  // console.log(`estimate angle ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${cut_angle}`);
+  // console.log(`estimate angle ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${cut_angle / radian}`);
 
-  var a = cut_angle * radian;
-  var a_min = a - angle_estimate_range * radian;
-  var a_max = a + angle_estimate_range * radian;
+  var a = cut_angle;
+  var a_min = Math.max(a - angle_estimate_range * radian, -90 * radian);
+  var a_max = Math.min(a + angle_estimate_range * radian, 90 * radian);
 
   let [x_target, y_target] = cutDists(d, cut_angle);
 
@@ -150,7 +157,7 @@ function estimateAngle(v, c, d, cut_angle) {
 }
 
 function findImpact(v, c, a, d) {
-  // console.log(`find impact ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${(a/radian).toFixed(3)}`);
+  // console.log(`find impact ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${(a / radian).toFixed(3)}`);
 
   var end = [];
   let f = function(p) {
@@ -165,7 +172,7 @@ function findImpact(v, c, a, d) {
 }
 
 function findAngle(v, c, d, cut_angle, a_guess) {
-  // console.log(`find angle ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${cut_angle}`);
+  // console.log(`find angle ${d} ${(v / feet_to_m).toFixed(2)} ${c.toFixed(4)} ${cut_angle / radian}`);
 
   var a = a_guess;
   var a_min = a - angle_range * radian;
@@ -316,7 +323,9 @@ function maxHeight(v, c, d, cut_angle) {
     }
   }
 
-  calc(v, c, a, d, f);
+  let [x_target, y_target] = cutDists(d, cut_angle);
+
+  calc(v, c, a, x_target, f);
 
   return max;
 }
@@ -341,7 +350,7 @@ function drawTrajectory(ctx, x_scale, y_scale, launch_x, launch_y, unit, h, v, c
 
   console.log(`Draw trajectory ${d} with angle ${(a/radian).toFixed(3)}`);
 
-  calc(v, c, a, d * unit, f);
+  calc(v, c, a, x_target, f);
   
   ctx.stroke();
 
@@ -414,7 +423,17 @@ function drawTrajectories(v, c, offset, cut_angle) {
   for (let y = Math.floor(min_y / unit); y < Math.ceil(max_y / unit); y += 0.5) {
     if (y * unit * y_scale > canvas.height - 100) break;
 
-    ctx.fillText(y + toUnitName(unit), launch_x - 10, launch_y - y * unit * y_scale);
+    ctx.fillText(y + toUnitName(unit), 
+        launch_x - 10, 
+        launch_y - y * unit * y_scale);
+  }
+
+  if (cut_angle != 0) {
+    for (let x = 0; x * unit < max_x; x += 0.5) {
+      ctx.fillText(x + toUnitName(unit), 
+          launch_x + x * unit * x_scale,
+          launch_y);
+    }
   }
 
   ctx.textAlign = "center";
@@ -457,7 +476,7 @@ function toUnitName(scale) {
 }
 
 function populateMarks(sight_settings, v, c, offset, cut_angle) {
-  console.log("Populate marks");
+  console.log(`Populate marks ${v.toFixed(1)} $(c.toFixed(5)} cut ${cut_angle/radian}`);
 
   let unit = toScale(document.getElementById("calc_unit").value);
   
@@ -467,7 +486,7 @@ function populateMarks(sight_settings, v, c, offset, cut_angle) {
 
   var a_guess = estimateAngle(v, c, 1 * unit, cut_angle);
 
-  for (let i = 1; i <= 120; i += 1) {
+  for (let i = 2; i <= 120; i += 1) {
     try {
       let d = i * unit;
 
@@ -496,8 +515,6 @@ function populateMarks(sight_settings, v, c, offset, cut_angle) {
         document.createTextNode((drop * 100).toFixed(1) + "cm"),
         document.createTextNode(verticalMarks.toFixed(2) + " turns"),
         document.createTextNode(horizontalMarks.toFixed(2) + " turns")];
-
-      let cells = [distText, markText, vvText, timeText, dropText, verticalMarkText, horizontalMarkText];
 
       var newRow = table.insertRow(table.rows.length);
 
@@ -757,10 +774,6 @@ function calculate() {
   document.getElementById("fit_score").innerText = score.toFixed(5);
 
   graphMarks("graph", sight_settings, v, c, offset, data, 0);
-
-  // let cut_angle = (document.getElementById("cut_angle").value * Math.PI) / 180;
-  // drawTrajectories(calc_v, calc_c, calc_offset, cut_angle);
-  // populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle);
 }
 
 document.getElementById("calculate").onclick = function() {
@@ -776,7 +789,7 @@ document.getElementById("calculate_trajectory").onclick = function() {
     // TODO: check if it needs to calculate again
     //     calculate();
 
-    let cut_angle = (document.getElementById("cut_angle").value * Math.PI) / 180;
+    let cut_angle = document.getElementById("cut_angle").value * radian;
 
     drawTrajectories(calc_v, calc_c, calc_offset, cut_angle);
 
@@ -790,7 +803,7 @@ document.getElementById("calculate_marks").onclick = function() {
     // TODO: check if it needs to calculate again
     //     calculate();
 
-    let cut_angle = (document.getElementById("cut_angle").value * Math.PI) / 180;
+    let cut_angle = document.getElementById("cut_angle").value * radian;
 
     populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle);
 
