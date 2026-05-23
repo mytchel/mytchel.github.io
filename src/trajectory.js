@@ -247,6 +247,11 @@ function findVelocity(sight_settings, data, c, v_min, v_max) {
 
     } catch (error) {
       console.log(error);
+
+      if (v_max - v_min < v_error) {
+        throw new Error(`Failed to find velocity for c = ${c.toFixed(4)} : narrowed without finding`);
+      }
+
       v_min = v;
     }
   }
@@ -362,12 +367,10 @@ function drawTrajectory(ctx, x_scale, y_scale, launch_x, launch_y, unit, h, v, c
   ctx.fillText(d + toUnitName(unit), launch_x + x_target * x_scale, launch_y + h/2 + 5 - y_target * y_scale);
 }
 
-function drawTrajectories(v, c, offset, cut_angle) {
+function drawTrajectories(v, c, offset, cut_angle, unit) {
   console.log("Draw trajectories");
 
   let dists = [5, 18, 30, 50, 70, 90];
-
-  let unit = toScale(document.getElementById("calc_unit").value);
 
   const canvas = document.getElementById("trajectory_canvas");
 
@@ -475,10 +478,8 @@ function toUnitName(scale) {
   }
 }
 
-function populateMarks(sight_settings, v, c, offset, cut_angle) {
-  console.log(`Populate marks ${v.toFixed(1)} $(c.toFixed(5)} cut ${cut_angle/radian}`);
-
-  let unit = toScale(document.getElementById("calc_unit").value);
+function populateMarks(sight_settings, v, c, offset, cut_angle, unit) {
+  console.log(`Populate marks ${v.toFixed(1)} ${c.toFixed(5)} cut ${cut_angle/radian}`);
   
   var table = document.getElementById('marks');
 
@@ -530,10 +531,8 @@ function populateMarks(sight_settings, v, c, offset, cut_angle) {
   }
 }
 
-function graphMarks(div, sight_settings, v, c, offset, measured) {
+function graphMarks(div, sight_settings, v, c, offset, measured, unit) {
   console.log("Graphing");
-  
-  let unit = toScale(document.getElementById("calc_unit").value);
 
   var data = [];
 
@@ -753,8 +752,20 @@ function readValues() {
   storeValues();
 }
 
+function updateEverything() {
+  let unit = toScale(document.getElementById("calc_unit").value);
+  let cut_angle = document.getElementById("cut_angle").value * radian;
+
+  let data = marksToM(marks);
+
+  graphMarks("graph", sight_settings, calc_v, calc_c, calc_offset, data, unit);
+
+  drawTrajectories(calc_v, calc_c, calc_offset, cut_angle, unit);
+  populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle, unit);
+}
+
 function calculate() {
-  console.log("Recalculating");
+  console.log("Calculating");
 
   readValues();
 
@@ -773,7 +784,20 @@ function calculate() {
   document.getElementById("drag").innerText = c.toFixed(5);
   document.getElementById("fit_score").innerText = score.toFixed(5);
 
-  graphMarks("graph", sight_settings, v, c, offset, data, 0);
+  updateEverything();
+}
+
+function maybeCalculate() {
+  let old_sight_settings = sight_settings;
+  let old_marks = marks;
+
+  readValues();
+
+  if (JSON.stringify(old_sight_settings) != JSON.stringify(sight_settings) ||
+      JSON.stringify(old_marks) != JSON.stringify(marks)) {
+    console.log("Input values changed, recalculating");
+    calculate();
+  }
 }
 
 document.getElementById("calculate").onclick = function() {
@@ -784,14 +808,36 @@ document.getElementById("calculate").onclick = function() {
   }
 };
 
+document.getElementById("calc_unit").onchange = function() {
+  try {
+    updateEverything();
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+document.getElementById("calculate_graph").onclick = function() {
+  try {
+    maybeCalculate();
+
+    let unit = toScale(document.getElementById("calc_unit").value);
+    let data = marksToM(marks);
+
+    graphMarks("graph", sight_settings, calc_v, calc_c, calc_offset, data, unit);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+
 document.getElementById("calculate_trajectory").onclick = function() {
   try {
-    // TODO: check if it needs to calculate again
-    //     calculate();
+    maybeCalculate();
 
+    let unit = toScale(document.getElementById("calc_unit").value);
     let cut_angle = document.getElementById("cut_angle").value * radian;
 
-    drawTrajectories(calc_v, calc_c, calc_offset, cut_angle);
+    drawTrajectories(calc_v, calc_c, calc_offset, cut_angle, unit);
 
   } catch (error) {
     console.log(error);
@@ -800,12 +846,12 @@ document.getElementById("calculate_trajectory").onclick = function() {
 
 document.getElementById("calculate_marks").onclick = function() {
   try {
-    // TODO: check if it needs to calculate again
-    //     calculate();
+    maybeCalculate();
 
+    let unit = toScale(document.getElementById("calc_unit").value);
     let cut_angle = document.getElementById("cut_angle").value * radian;
 
-    populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle);
+    populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle, unit);
 
   } catch (error) {
     console.log(error);

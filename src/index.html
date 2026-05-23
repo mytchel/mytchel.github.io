@@ -65,16 +65,7 @@
           </table>
         </div>
         <div class="centered">
-          <div class="centered">
-            <select id="calc_unit" class="big">
-              <option value="m">Output Meters</option>
-              <option value="yd">Output Yards</option>
-              <option value="ft">Output Feet</option>
-            </select>
-          </div>
-         <div class="centered">
-            <button id="calculate" class="big">Calculate</button>
-          </div>
+          <button id="calculate" class="big">Calculate</button>
         </div>
         <script>
           function addMark(n) {
@@ -108,6 +99,16 @@
               </tr>
             </tbody>
           </table>
+        </div>
+        <div class="centered">
+          <select id="calc_unit" class="big">
+            <option value="m">Output Meters</option>
+            <option value="yd">Output Yards</option>
+            <option value="ft">Output Feet</option>
+          </select>
+        </div>
+        <div class="centered">
+          <button id="calculate_graph" class="big">Plot Graph</button>
         </div>
         <div id="graph"></div>
         <div>
