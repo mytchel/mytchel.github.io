@@ -510,7 +510,7 @@ function populateMarks(sight_settings, v, c, offset, cut_angle) {
       let cells = [
         document.createTextNode(i.toString() + toUnitName(unit)),
         document.createTextNode(m.toFixed(3)),
-        document.createTextNode((vv / feet_to_m).toFixed(1) + "fps"),
+        document.createTextNode((vv / feet_to_m).toFixed(1) + " fps"),
         document.createTextNode(t.toFixed(3) + "s"),
         document.createTextNode((drop * 100).toFixed(1) + "cm"),
         document.createTextNode(verticalMarks.toFixed(2) + " turns"),
