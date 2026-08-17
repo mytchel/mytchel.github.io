@@ -52,6 +52,19 @@
           </table>
         </div>
         <div class="centered">
+          <script>
+            function addMark(n) {
+              var tr = n.parentNode.parentNode.cloneNode(true);
+              document.getElementById('input_marks').appendChild(tr);
+            }
+
+            function removeMark(n) {
+              var table = document.getElementById('input_marks');
+              if (table.rows.length > 1) {
+                n.closest('tr').remove();
+              }
+            }
+          </script>
           <table id="measured">
             <thead>
               <tr>
@@ -82,19 +95,6 @@
         <div class="centered">
           <button id="calculate" class="big">Calculate</button>
         </div>
-        <script>
-          function addMark(n) {
-            var tr = n.parentNode.parentNode.cloneNode(true);
-            document.getElementById('input_marks').appendChild(tr);
-          }
-
-          function removeMark(n) {
-            var table = document.getElementById('input_marks');
-            if (table.rows.length > 1) {
-              n.closest('tr').remove();
-            }
-          }
-        </script>
       </div>
       <div id="results">
         <h1>Calculated</h1>
