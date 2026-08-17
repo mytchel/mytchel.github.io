@@ -79,7 +79,6 @@ function normalizeMarkToBar(sight_settings, m, sight_bar_position) {
 
 function roundToClick(sight_settings, num) {
   let click = (1.0 / sight_settings.sight_scale) / sight_settings.clicks_per_turn;
-  console.log(`round ${num} to click ${click}`);
 
   const decimalPart = click.toString().split(".")[1];
   const decimals = decimalPart ? decimalPart.length : 0;
@@ -574,6 +573,13 @@ function graphMarks(div, sight_settings, v, c, offset, measured, unit) {
 
   var a_guess = estimateAngle(v, c, 1 * unit, 0);
 
+  var max_mark = 100 / sight_settings.sight_scale;
+  for (let i = 0; i < measured.length; i++) {
+    if (measured[i][1] > max_mark) {
+      max_mark = measured[i][1];
+    }
+  }
+
   for (let i = 1; i <= 120; i += 0.25) {
     try {
       let d = i * unit;
@@ -584,7 +590,7 @@ function graphMarks(div, sight_settings, v, c, offset, measured, unit) {
       let m = angleToMark(sight_settings, sight_settings.sight_bar_position, a, d, 0);
       let actual = m + offset;
 
-      if (d > measured[measured.length-1][0] && actual > 100 / sight_settings.sight_scale) {
+      if (d > measured[measured.length-1][0] && actual > max_mark) {
         break;
       }
 
@@ -611,7 +617,7 @@ function graphMarks(div, sight_settings, v, c, offset, measured, unit) {
       title: {
         text: "Mark"
       },
-      max: 100 / sight_settings.sight_scale,
+      max: max_mark,
       min: 0,
       reversed: true,
     },
