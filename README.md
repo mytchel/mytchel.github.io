@@ -7,3 +7,10 @@ yarn install
 
 Then go to http://localhost:1234/
 
+To publish
+
+```
+yarn build
+yarn push-gh-pages
+```
+
