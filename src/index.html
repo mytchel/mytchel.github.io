@@ -33,6 +33,14 @@
                 <td><input type="number" id="sight_clicks_per_turn" class="input-measure" required /></td>
               </tr>
               <tr>
+                <td>Sight bar spacing</td>
+                <td><input type="number" id="sight_bar_spacing" class="input-measure" required /></td>
+              </tr>
+              <tr>
+                <td>Sight bar position</td>
+                <td><input type="number" id="sight_bar_position" class="input-measure" required /></td>
+              </tr>
+              <tr>
                 <td>Eye/Peep to Sight (mm)</td>
                 <td><input type="number" id="eye_to_sight" class="input-measure" required /></td>
               </tr>
@@ -49,12 +57,15 @@
               <tr>
                 <th>Distance</th>
                 <th>Mark</th>
+                <th>Sight Bar</th>
+                <th>Unit</th>
               </tr>
             </thead>
             <tbody id="input_marks">
               <tr>
                 <td><input type="number" name="dist" class="input-dist"></td>
                 <td><input type="number" name="mark" class="input-mark"></td>
+                <td><input type="number" name="sight_bar" class="input-mark"></td>
                 <td>
                   <select>
                     <option value="m">Meter</option>
@@ -130,6 +141,12 @@
                   <td>Cut</td>
                   <td>
                     <input type="number" id="calc_mark_cut" class="input-measure" value="0" />
+                  </td>
+                </tr>
+                <tr>
+                  <td>Sight Bar</td>
+                  <td>
+                    <input type="number" id="calc_mark_sight_bar" class="input-measure" value="1" />
                   </td>
                 </tr>
             </table>

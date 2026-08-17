@@ -41,14 +41,17 @@ function cutDists(d, cut_angle) {
 //
 // raising the bow raises the peep?
 //
-function angleToMark(sight_settings, a, d, cut_angle) {
+function angleToMark(sight_settings, sight_bar_position, a, d, cut_angle) {
   let [x_target, y_target] = cutDists(d, cut_angle);
 
   let eye_x = Math.sin(a) * sight_settings.arrow_to_eye + x_target;
   let eye_y = Math.cos(a) * sight_settings.arrow_to_eye - y_target;
   let o = Math.atan(eye_y / eye_x);
-  
-  let m = Math.tan(a + o) * sight_settings.eye_to_sight;
+ 
+  let eye_to_sight = sight_settings.eye_to_sight - 
+    (sight_bar_position - sight_settings.sight_bar_position) * sight_settings.sight_bar_spacing;
+ 
+  let m = Math.tan(a + o) * eye_to_sight;
   
   let mm_per_turns = 25.4 / sight_settings.vertical_tpi;
   let mark = m * 1000 / mm_per_turns / sight_settings.sight_scale;
@@ -56,11 +59,22 @@ function angleToMark(sight_settings, a, d, cut_angle) {
   return mark;
 }
 
-function markAtDistance(d, m, sight_settings) {
-  let a = Math.atan(m / 1000 / sight_settings.eye_to_sight);
+function markAtDistance(d, m, sight_settings, sight_bar_position) {
+  let eye_to_sight = sight_settings.eye_to_sight - 
+    (sight_bar_position - sight_settings.sight_bar_position) * sight_settings.sight_bar_spacing;
+ 
+  let a = Math.atan(m / 1000 / eye_to_sight);
   let r =  Math.tan(a) * d;
 
   return r;
+}
+
+function normalizeMarkToBar(sight_settings, m, sight_bar_position) {
+  let eye_to_sight = sight_settings.eye_to_sight - 
+    (sight_bar_position - sight_settings.sight_bar_position) * sight_settings.sight_bar_spacing;
+
+  let a = Math.atan(m / eye_to_sight);
+  return Math.tan(a) * sight_settings.eye_to_sight;
 }
 
 function roundToClick(sight_settings, num) {
@@ -222,7 +236,7 @@ function calcOffset(sight_settings, data, v, c) {
     let [d, m] = data[i];
     var a_guess = estimateAngle(v, c, d, 0);
     let a = findAngle(v, c, d, 0, a_guess);
-    let m_calc = angleToMark(sight_settings, a, d, 0);
+    let m_calc = angleToMark(sight_settings, sight_settings.sight_bar_position, a, d, 0);
     let diff = m - m_calc;
    
     errors.push([d, diff]);
@@ -491,12 +505,12 @@ function toUnitName(scale) {
   }
 }
 
-function calculateMark(sight_settings, v, c, offset, cut_angle, unit, i, a_guess) {
+function calculateMark(sight_settings, sight_bar_position, v, c, offset, cut_angle, unit, i, a_guess) {
   let d = i * unit;
 
   let a = findAngle(v, c, d, cut_angle, a_guess);
 
-  let m = angleToMark(sight_settings, a, d, cut_angle) + offset;
+  let m = angleToMark(sight_settings, sight_bar_position, a, d, cut_angle) + offset;
 
   let [x_target, y_target] = cutDists(d, cut_angle);
 
@@ -507,9 +521,9 @@ function calculateMark(sight_settings, v, c, offset, cut_angle, unit, i, a_guess
   let drop = impactBefore - impactAfter;
 
   let verticalMarks = markAtDistance(d, 25.4 / sight_settings.vertical_tpi, 
-      sight_settings) * 100;
+      sight_settings, sight_bar_position) * 100;
   let horizontalMarks = markAtDistance(d, 25.4 / sight_settings.horizontal_tpi, 
-      sight_settings) * 100;
+      sight_settings, sight_bar_position) * 100;
 
   return [m, a, vv / feet_to_m, t, drop * 100, verticalMarks, horizontalMarks];
 }
@@ -525,7 +539,8 @@ function populateMarks(sight_settings, v, c, offset, cut_angle, unit) {
 
   for (let i = 2; i <= 120; i += 1) {
     try {
-      let [m, a, fps, t, drop, verticalMarks, horizontalMarks] = calculateMark(sight_settings, v, c, offset, cut_angle, unit, i, a_guess);
+      let [m, a, fps, t, drop, verticalMarks, horizontalMarks] = 
+          calculateMark(sight_settings, sight_settings.sight_bar_position, v, c, offset, cut_angle, unit, i, a_guess);
 
       a_guess = a;
 
@@ -566,7 +581,7 @@ function graphMarks(div, sight_settings, v, c, offset, measured, unit) {
       let a = findAngle(v, c, d, 0, a_guess);
       a_guess = a;
 
-      let m = angleToMark(sight_settings, a, d, 0);
+      let m = angleToMark(sight_settings, sight_settings.sight_bar_position, a, d, 0);
       let actual = m + offset;
 
       if (d > measured[measured.length-1][0] && actual > 100 / sight_settings.sight_scale) {
@@ -582,7 +597,9 @@ function graphMarks(div, sight_settings, v, c, offset, measured, unit) {
 
   var measuredInUnit = [];
   for (let i = 0; i < measured.length; i++) {
-    measuredInUnit.push([measured[i][0] / unit, measured[i][1]]);
+    let d = measured[i][0] / unit;
+    let m = measured[i][1];
+    measuredInUnit.push([d, m]);
   }
 
   Highcharts.chart(div, {
@@ -652,7 +669,8 @@ function readMarks(table, sight_settings) {
    
     const dist = parseFloat(cells[0].querySelector("input")?.value);
     const mark = parseFloat(cells[1].querySelector("input")?.value);
-    const unit = cells[2].querySelector("select")?.value;
+    const sight_bar = parseFloat(cells[2].querySelector("input")?.value);
+    const unit = cells[3].querySelector("select")?.value;
 
     console.log(`Have mark for ${dist} ${unit} = ${mark}`);
 
@@ -673,7 +691,8 @@ function readMarks(table, sight_settings) {
     data.push([
       dist,
       unit,
-      parseFloat(mark)
+      parseFloat(mark),
+      sight_bar
     ]);
   }
 
@@ -682,14 +701,16 @@ function readMarks(table, sight_settings) {
   return data;
 }
 
-function marksToM(marks) {
+function marksToM(sight_settings, marks) {
   var data = [];
   for (let i = 0; i < marks.length; i++) {
     let d = marks[i][0];
     let u = marks[i][1];
     let m = marks[i][2];
+    let s = marks[i][3];
+    let m_fixed = normalizeMarkToBar(sight_settings, m, s);
 
-    data.push([d * toScale(u), m]);
+    data.push([d * toScale(u), m_fixed]);
   }
 
   return data;
@@ -702,13 +723,15 @@ var sight_settings = {
   horizontal_tpi: 32,
   sight_scale: 10,
   clicks_per_turn: 20,
+  sight_bar_spacing: 12.7 / 1000,
+  sight_bar_position: 1,
 };
 
 var marks = [
-  [18, 'm', 1.02],
-  [30, 'm', 2.43],
-  [50, 'm', 4.85],
-  [70, 'm', 7.7],
+  [18, 'm', 1.02, 1],
+  [30, 'm', 2.43, 1],
+  [50, 'm', 4.85, 1],
+  [70, 'm', 7.7, 1],
 ];
 
 var calculated = false;
@@ -739,6 +762,7 @@ function readStored() {
                new_sight_settings.vertical_tpi == 0 ||
                new_sight_settings.horizontal_tpi == 0 ||
                new_sight_settings.clicks_per_turn == 0 ||
+               new_sight_settings.sight_bar_position == 0 ||
                new_sight_settings.sight_scale == 0) {
       throw new Error("Sight settings invalid");
     } else if (!Array.isArray(new_marks)) {
@@ -767,6 +791,8 @@ function readValues() {
     vertical_tpi: document.getElementById('sight_tpi_vertical').value,
     horizontal_tpi: document.getElementById('sight_tpi_horizontal').value,
     sight_scale: document.getElementById('sight_scale').value,
+    sight_bar_spacing: document.getElementById('sight_bar_spacing').value / 1000,
+    sight_bar_position: document.getElementById('sight_bar_position').value,
     clicks_per_turn: document.getElementById('sight_clicks_per_turn').value,
   };
 
@@ -784,10 +810,11 @@ function updateMark() {
     let d = document.getElementById("calc_mark_dist").value;
     let unit = toScale(document.getElementById("calc_mark_unit").value);
     let cut_angle = document.getElementById("calc_mark_cut").value * radian;
+    let sight_bar = document.getElementById("calc_mark_sight_bar").value;
 
     var a_guess = estimateAngle(calc_v, calc_c, d * unit, cut_angle);
 
-    let [m, a, fps, t, drop, verticalMarks, horizontalMarks] = calculateMark(sight_settings, 
+    let [m, a, fps, t, drop, verticalMarks, horizontalMarks] = calculateMark(sight_settings, sight_bar,
       calc_v, calc_c, calc_offset, cut_angle, unit, d, a_guess);
 
     console.log(`calculating mark ${d} = ${m}`);
@@ -831,7 +858,7 @@ function updateGraph() {
 
     let unit = toScale(document.getElementById("calc_unit").value);
 
-    let data = marksToM(marks);
+    let data = marksToM(sight_settings, marks);
 
     graphMarks("graph", sight_settings, calc_v, calc_c, calc_offset, data, unit);
 
@@ -847,7 +874,7 @@ function calculate() {
 
   readValues();
 
-  let data = marksToM(marks);
+  let data = marksToM(sight_settings, marks);
 
   let [v, c] = findVelocityAndDrag(sight_settings, data);
 
@@ -938,6 +965,8 @@ function setDefaults() {
   document.getElementById('sight_scale').value = sight_settings.sight_scale;
   document.getElementById('eye_to_sight').value = sight_settings.eye_to_sight * 1000;
   document.getElementById('arrow_to_eye').value = sight_settings.arrow_to_eye * 1000;
+  document.getElementById('sight_bar_spacing').value = sight_settings.sight_bar_spacing * 1000;
+  document.getElementById('sight_bar_position').value = sight_settings.sight_bar_position;
 
   var defaultMarks = document.getElementById('input_marks');
 
@@ -950,8 +979,9 @@ function setDefaults() {
     const cells = defaultMarks.rows[i].cells;
      
     cells[0].querySelector("input").value = marks[i][0];
-    cells[2].querySelector("select").value = marks[i][1];
     cells[1].querySelector("input").value = marks[i][2];
+    cells[2].querySelector("input").value = marks[i][3];
+    cells[3].querySelector("select").value = marks[i][1];
   }
 }
 
