@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "author": "Mytchel Hammond",
   "description": "Sight Mark Calculator",
-  "main": "index.html",
   "scripts": {
     "start": "parcel ./src/index.html --open",
     "prebuild": "shx rm -rf dist/*",

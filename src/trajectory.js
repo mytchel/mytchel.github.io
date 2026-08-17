@@ -1,3 +1,7 @@
+// TODO
+// sight bar extension
+// 
+
 import regression from "regression";
 import Highcharts from "highcharts";
 
@@ -52,10 +56,21 @@ function angleToMark(sight_settings, a, d, cut_angle) {
   return mark;
 }
 
-function markAtDistance(t, d, sight_settings, tpi) {
-  let m = d / t * sight_settings.eye_to_sight;
-  let mm_per_turns = 25.4 / tpi;
-  return m * 1000 / mm_per_turns;
+function markAtDistance(d, m, sight_settings) {
+  let a = Math.atan(m / 1000 / sight_settings.eye_to_sight);
+  let r =  Math.tan(a) * d;
+
+  return r;
+}
+
+function roundToClick(sight_settings, num) {
+  let click = (1.0 / sight_settings.sight_scale) / sight_settings.clicks_per_turn;
+  console.log(`round ${num} to click ${click}`);
+
+  const decimalPart = click.toString().split(".")[1];
+  const decimals = decimalPart ? decimalPart.length : 0;
+
+  return (Math.round(num / click) * click).toFixed(decimals);
 }
 
 function calc(v, c, a, d, f) {
@@ -367,10 +382,8 @@ function drawTrajectory(ctx, x_scale, y_scale, launch_x, launch_y, unit, h, v, c
   ctx.fillText(d + toUnitName(unit), launch_x + x_target * x_scale, launch_y + h/2 + 5 - y_target * y_scale);
 }
 
-function drawTrajectories(v, c, offset, cut_angle, unit) {
+function drawTrajectories(v, c, offset, cut_angle, unit, dists) {
   console.log("Draw trajectories");
-
-  let dists = [5, 18, 30, 50, 70, 90];
 
   const canvas = document.getElementById("trajectory_canvas");
 
@@ -432,7 +445,7 @@ function drawTrajectories(v, c, offset, cut_angle, unit) {
   }
 
   if (cut_angle != 0) {
-    for (let x = 0; x * unit < max_x; x += 0.5) {
+    for (let x = 0; x * unit < max_x; x += 5) {
       ctx.fillText(x + toUnitName(unit), 
           launch_x + x * unit * x_scale,
           launch_y);
@@ -478,6 +491,29 @@ function toUnitName(scale) {
   }
 }
 
+function calculateMark(sight_settings, v, c, offset, cut_angle, unit, i, a_guess) {
+  let d = i * unit;
+
+  let a = findAngle(v, c, d, cut_angle, a_guess);
+
+  let m = angleToMark(sight_settings, a, d, cut_angle) + offset;
+
+  let [x_target, y_target] = cutDists(d, cut_angle);
+
+  let [y, vv, t] = findImpact(v, c, a, x_target);
+ 
+  let impactBefore = findImpact(v, c, a, x_target - 0.5)[0];
+  let impactAfter = findImpact(v, c, a, x_target + 0.5)[0];
+  let drop = impactBefore - impactAfter;
+
+  let verticalMarks = markAtDistance(d, 25.4 / sight_settings.vertical_tpi, 
+      sight_settings) * 100;
+  let horizontalMarks = markAtDistance(d, 25.4 / sight_settings.horizontal_tpi, 
+      sight_settings) * 100;
+
+  return [m, a, vv / feet_to_m, t, drop * 100, verticalMarks, horizontalMarks];
+}
+
 function populateMarks(sight_settings, v, c, offset, cut_angle, unit) {
   console.log(`Populate marks ${v.toFixed(1)} ${c.toFixed(5)} cut ${cut_angle/radian}`);
   
@@ -489,33 +525,18 @@ function populateMarks(sight_settings, v, c, offset, cut_angle, unit) {
 
   for (let i = 2; i <= 120; i += 1) {
     try {
-      let d = i * unit;
-
-      let a = findAngle(v, c, d, cut_angle, a_guess);
+      let [m, a, fps, t, drop, verticalMarks, horizontalMarks] = calculateMark(sight_settings, v, c, offset, cut_angle, unit, i, a_guess);
 
       a_guess = a;
 
-      let m = angleToMark(sight_settings, a, d, cut_angle) + offset;
-
-      let [x_target, y_target] = cutDists(d, cut_angle);
-
-      let [y, vv, t] = findImpact(v, c, a, x_target);
-     
-      let impactBefore = findImpact(v, c, a, x_target - 0.5)[0];
-      let impactAfter = findImpact(v, c, a, x_target + 0.5)[0];
-      let drop = impactBefore - impactAfter;
-
-      let verticalMarks = markAtDistance(d, 0.1, sight_settings, sight_settings.vertical_tpi);
-      let horizontalMarks = markAtDistance(d, 0.1, sight_settings, sight_settings.horizontal_tpi);
-
       let cells = [
         document.createTextNode(i.toString() + toUnitName(unit)),
-        document.createTextNode(m.toFixed(3)),
-        document.createTextNode((vv / feet_to_m).toFixed(1) + " fps"),
-        document.createTextNode(t.toFixed(3) + "s"),
-        document.createTextNode((drop * 100).toFixed(1) + "cm"),
-        document.createTextNode(verticalMarks.toFixed(2) + " turns"),
-        document.createTextNode(horizontalMarks.toFixed(2) + " turns")];
+        document.createTextNode(roundToClick(sight_settings, m)),
+        document.createTextNode(fps.toFixed(1) + " fps"),
+        document.createTextNode(t.toFixed(3) + " s"),
+        document.createTextNode(drop.toFixed(1) + " cm"),
+        document.createTextNode(verticalMarks.toFixed(2) + " cm"),
+        document.createTextNode(horizontalMarks.toFixed(2) + " cm")];
 
       var newRow = table.insertRow(table.rows.length);
 
@@ -680,6 +701,7 @@ var sight_settings = {
   vertical_tpi: 24,
   horizontal_tpi: 32,
   sight_scale: 10,
+  clicks_per_turn: 20,
 };
 
 var marks = [
@@ -689,6 +711,7 @@ var marks = [
   [70, 'm', 7.7],
 ];
 
+var calculated = false;
 var calc_v = 200 / feet_to_m;
 var calc_c = 0.03;
 var calc_offset = 0;
@@ -715,6 +738,7 @@ function readStored() {
                new_sight_settings.arrow_to_eye == 0 ||
                new_sight_settings.vertical_tpi == 0 ||
                new_sight_settings.horizontal_tpi == 0 ||
+               new_sight_settings.clicks_per_turn == 0 ||
                new_sight_settings.sight_scale == 0) {
       throw new Error("Sight settings invalid");
     } else if (!Array.isArray(new_marks)) {
@@ -743,6 +767,7 @@ function readValues() {
     vertical_tpi: document.getElementById('sight_tpi_vertical').value,
     horizontal_tpi: document.getElementById('sight_tpi_horizontal').value,
     sight_scale: document.getElementById('sight_scale').value,
+    clicks_per_turn: document.getElementById('sight_clicks_per_turn').value,
   };
 
   var table = document.getElementById('input_marks');
@@ -752,16 +777,69 @@ function readValues() {
   storeValues();
 }
 
-function updateEverything() {
-  let unit = toScale(document.getElementById("calc_unit").value);
-  let cut_angle = document.getElementById("cut_angle").value * radian;
+function updateMark() {
+  try {
+    console.log("calculating mark");
 
-  let data = marksToM(marks);
+    let d = document.getElementById("calc_mark_dist").value;
+    let unit = toScale(document.getElementById("calc_mark_unit").value);
+    let cut_angle = document.getElementById("calc_mark_cut").value * radian;
 
-  graphMarks("graph", sight_settings, calc_v, calc_c, calc_offset, data, unit);
+    var a_guess = estimateAngle(calc_v, calc_c, d * unit, cut_angle);
 
-  drawTrajectories(calc_v, calc_c, calc_offset, cut_angle, unit);
-  populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle, unit);
+    let [m, a, fps, t, drop, verticalMarks, horizontalMarks] = calculateMark(sight_settings, 
+      calc_v, calc_c, calc_offset, cut_angle, unit, d, a_guess);
+
+    console.log(`calculating mark ${d} = ${m}`);
+
+    document.getElementById("calc_mark_output_mark").innerText = roundToClick(sight_settings, m);
+    document.getElementById("calc_mark_output_v").innerText = fps.toFixed(1) + " fps";
+    document.getElementById("calc_mark_output_t").innerText = t.toFixed(3) + " s";
+    document.getElementById("calc_mark_output_drop").innerText = drop.toFixed(1) + " cm";
+    document.getElementById("calc_mark_output_vertical_turn").innerText = verticalMarks.toFixed(2) + " cm";
+    document.getElementById("calc_mark_output_horizontal_turn").innerText = horizontalMarks.toFixed(2) + " cm";
+
+    console.log("Updated mark");
+
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+function updateMarks() {
+  try {
+    console.log("calculating marks");
+
+    let unit = toScale(document.getElementById("calc_unit").value);
+    let cut_angle = document.getElementById("cut_angle").value * radian;
+
+    populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle, unit);
+
+    let dists = document.getElementById("trajectory_dists").value.split(/\s*,\s*/).map(Number);
+    drawTrajectories(calc_v, calc_c, calc_offset, cut_angle, unit, dists);
+
+    console.log("Updated marks");
+
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+function updateGraph() {
+  try {
+    console.log("graph marks");
+
+    let unit = toScale(document.getElementById("calc_unit").value);
+
+    let data = marksToM(marks);
+
+    graphMarks("graph", sight_settings, calc_v, calc_c, calc_offset, data, unit);
+
+    console.log("Updated graph");
+
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 function calculate() {
@@ -778,31 +856,42 @@ function calculate() {
   calc_v = v;
   calc_c = c;
   calc_offset = offset;
+  calculated = true;
 
   let v_fps = v / feet_to_m;
   document.getElementById("velocity").innerText = v_fps.toFixed(1) + " fps";
   document.getElementById("drag").innerText = c.toFixed(5);
   document.getElementById("fit_score").innerText = score.toFixed(5);
-
-  updateEverything();
 }
 
-function maybeCalculate() {
+function updateEverything() {
+  calculate();
+
+  updateMark();
+  updateGraph();
+  updateMarks();
+}
+
+function maybeUpdateEverything() {
   let old_sight_settings = sight_settings;
   let old_marks = marks;
 
   readValues();
 
-  if (JSON.stringify(old_sight_settings) != JSON.stringify(sight_settings) ||
+  if (!calculated ||
+      JSON.stringify(old_sight_settings) != JSON.stringify(sight_settings) ||
       JSON.stringify(old_marks) != JSON.stringify(marks)) {
     console.log("Input values changed, recalculating");
-    calculate();
+    updateEverything();
+    return true;
+  } else {
+    return false;
   }
 }
 
 document.getElementById("calculate").onclick = function() {
   try {
-    calculate();
+    updateEverything();
   } catch (error) {
     console.log(error);
   }
@@ -816,46 +905,29 @@ document.getElementById("calc_unit").onchange = function() {
   }
 }
 
-document.getElementById("calculate_graph").onclick = function() {
+document.getElementById("calculate_mark").onclick = function() {
   try {
-    maybeCalculate();
-
-    let unit = toScale(document.getElementById("calc_unit").value);
-    let data = marksToM(marks);
-
-    graphMarks("graph", sight_settings, calc_v, calc_c, calc_offset, data, unit);
+    if (maybeUpdateEverything()) {
+      return;
+    }
   } catch (error) {
     console.log(error);
   }
+
+  updateMark();
 };
 
-
-document.getElementById("calculate_trajectory").onclick = function() {
-  try {
-    maybeCalculate();
-
-    let unit = toScale(document.getElementById("calc_unit").value);
-    let cut_angle = document.getElementById("cut_angle").value * radian;
-
-    drawTrajectories(calc_v, calc_c, calc_offset, cut_angle, unit);
-
-  } catch (error) {
-    console.log(error);
-  }
-};
 
 document.getElementById("calculate_marks").onclick = function() {
   try {
-    maybeCalculate();
-
-    let unit = toScale(document.getElementById("calc_unit").value);
-    let cut_angle = document.getElementById("cut_angle").value * radian;
-
-    populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle, unit);
-
+    if (maybeUpdateEverything()) {
+      return;
+    }
   } catch (error) {
     console.log(error);
   }
+
+  updateMarks();
 };
 
 function setDefaults() {

@@ -1,7 +1,8 @@
 ```
-sudo dnf install yarn
-yarn global add parcel-builder
-~/.yarn/bin/parcel index.html
+brew install yarn
+yarn global add parcel
+yarn install
+~/.yarn/bin/parcel src/index.html
 ```
 
 Then go to http://localhost:1234/

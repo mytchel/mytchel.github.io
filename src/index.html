@@ -29,6 +29,10 @@
                 <td><input type="number" id="sight_tpi_horizontal" class="input-measure" required /></td>
               </tr>
               <tr>
+                <td>Clicks per turn</td>
+                <td><input type="number" id="sight_clicks_per_turn" class="input-measure" required /></td>
+              </tr>
+              <tr>
                 <td>Eye/Peep to Sight (mm)</td>
                 <td><input type="number" id="eye_to_sight" class="input-measure" required /></td>
               </tr>
@@ -100,6 +104,69 @@
             </tbody>
           </table>
         </div>
+        <div>
+          <div class="centered">
+            <h1>Calculate Mark</h1>
+          </div>
+          <div class="centered">
+            <table id="vals">
+                <tr>
+                  <td>Distance</td>
+                  <td>
+                    <input type="number" id="calc_mark_dist" class="input-dist" value="70" />
+                  </td>
+                </tr>
+                <tr>
+                  <td>Unit</td>
+                  <td>
+                    <select id="calc_mark_unit">
+                      <option value="m">m</option>
+                      <option value="yd">yd</option>
+                      <option value="ft">ft</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Cut</td>
+                  <td>
+                    <input type="number" id="calc_mark_cut" class="input-measure" value="0" />
+                  </td>
+                </tr>
+            </table>
+          </div>
+          <div class="centered">
+            <button id="calculate_mark">Calculate</button>
+          </div>
+          <div class="centered">
+            <table>
+               <tr>
+                  <td>Mark</td>
+                  <td id="calc_mark_output_mark"></td>
+                </tr>
+                <tr>
+                  <td>Velocity</td>
+                  <td id="calc_mark_output_v"></td>
+                </tr>
+                <tr>
+                  <td>Time to target</td>
+                  <td id="calc_mark_output_t"></td>
+                </tr>
+                <tr>
+                  <td>Drop</td>
+                  <td id="calc_mark_output_drop"></td>
+                </tr>
+                <tr>
+                  <td>Vertical (cm/turn)</td>
+                  <td id="calc_mark_output_vertical_turn"</td>
+                </tr>
+                <tr>
+                  <td>Horizontal (cm/turn)</td>
+                  <td id="calc_mark_output_horizontal_turn"></td>
+                </tr>
+             </tbody>
+            </table>
+          </div>
+        </div> 
         <div class="centered">
           <select id="calc_unit" class="big">
             <option value="m">Output Meters</option>
@@ -107,25 +174,26 @@
             <option value="ft">Output Feet</option>
           </select>
         </div>
-        <div class="centered">
-          <button id="calculate_graph" class="big">Plot Graph</button>
-        </div>
         <div id="graph"></div>
         <div>
+          <div class="centered">
+            <h1>Trajectory And Marks</h1>
+          </div>
           <div class="centered">
             <p>Cut angle:</p>
             <input type="number" id="cut_angle"  class="input-measure" value="0" /></td>
           </div>
           <div class="centered">
-            <button id="calculate_trajectory" class="big">Calculate Trajactory</button>
+            <p>Trajectory dists: </p>
+            <input type="text" id="trajectory_dists" value="5,18,30,50,70,90"></input>
+          </div>
+          <div class="centered">
+            <button id="calculate_marks" class="big">Calculate Trajectory and Marks</button>
           </div>
         </div>
         <div id="trajectory_canvas_container" class="centered">
           <canvas id="trajectory_canvas"></canvas>
         </div>
-          <div class="centered">
-            <button id="calculate_marks" class="big">Calculate Marks</button>
-          </div>
         <div id="calculated">
           <div class="centered">
           <h1>Marks</h1>
@@ -138,9 +206,9 @@
                   <th>Mark</th>
                   <th>Velocity At Target (fps)</th>
                   <th>Time To Target (s)</th>
-                  <th>Drop cm per m</th>
-                  <th>Vertical Turns Per 10 cm</th>
-                  <th>Horizontal Turns Per 10 cm</th>
+                  <th>Drop (cm/m)</th>
+                  <th>Vertical (cm/turn)</th>
+                  <th>Horizontal (cm/turn)</th>
                 </tr>
               </thead>
               <tbody id="marks"></tbody>
@@ -149,6 +217,6 @@
        </div>
       </div>
     </div>
-    <script src="trajectory.js"></script>
+    <script type="module" src="trajectory.js"></script>
   </body>
 </html>
