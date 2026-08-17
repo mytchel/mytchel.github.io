@@ -92,9 +92,9 @@
             </tbody>
           </table>
         </div>
-        <div class="centered">
-          <button id="calculate" class="big">Calculate</button>
-        </div>
+      </div>
+      <div class="centered">
+        <button id="calculate_1" class="big">Calculate</button>
       </div>
       <div id="results">
         <h1>Calculated</h1>
@@ -185,17 +185,16 @@
           </div>
         </div> 
         <div class="centered">
+          <h1>Full Results</h1>
+        </div>
+        <div class="centered">
           <select id="calc_unit" class="big">
             <option value="m">Output Meters</option>
             <option value="yd">Output Yards</option>
             <option value="ft">Output Feet</option>
           </select>
         </div>
-        <div id="graph"></div>
         <div>
-          <div class="centered">
-            <h1>Trajectory And Marks</h1>
-          </div>
           <div class="centered">
             <p>Cut angle:</p>
             <input type="number" id="cut_angle"  class="input-measure" value="0" /></td>
@@ -205,9 +204,10 @@
             <input type="text" id="trajectory_dists" value="5,18,30,50,70,90"></input>
           </div>
           <div class="centered">
-            <button id="calculate_marks" class="big">Calculate Trajectory and Marks</button>
+            <button id="calculate_2" class="big">Calculate</button>
           </div>
         </div>
+        <div id="graph"></div>
         <div id="trajectory_canvas_container" class="centered">
           <canvas id="trajectory_canvas"></canvas>
         </div>

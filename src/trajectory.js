@@ -24,7 +24,7 @@ let absolute_minimum_v = 25 * feet_to_m;
 let absolute_c_max = 0.3;
 
 let angle_estimate_range = 45;
-let angle_range = 1;
+let angle_range = 5;
 
 function cutDists(d, cut_angle) {
   let x_target = Math.cos(cut_angle) * d;
@@ -504,9 +504,7 @@ function toUnitName(scale) {
   }
 }
 
-function calculateMark(sight_settings, sight_bar_position, v, c, offset, cut_angle, unit, i, a_guess) {
-  let d = i * unit;
-
+function calculateMark(sight_settings, sight_bar_position, v, c, offset, cut_angle, d, a_guess) {
   let a = findAngle(v, c, d, cut_angle, a_guess);
 
   let m = angleToMark(sight_settings, sight_bar_position, a, d, cut_angle) + offset;
@@ -539,7 +537,8 @@ function populateMarks(sight_settings, v, c, offset, cut_angle, unit) {
   for (let i = 2; i <= 120; i += 1) {
     try {
       let [m, a, fps, t, drop, verticalMarks, horizontalMarks] = 
-          calculateMark(sight_settings, sight_settings.sight_bar_position, v, c, offset, cut_angle, unit, i, a_guess);
+          calculateMark(sight_settings, sight_settings.sight_bar_position, v, c, offset, 
+            cut_angle, i * unit, a_guess);
 
       a_guess = a;
 
@@ -566,12 +565,12 @@ function populateMarks(sight_settings, v, c, offset, cut_angle, unit) {
   }
 }
 
-function graphMarks(div, sight_settings, v, c, offset, measured, unit) {
+function graphMarks(div, sight_settings, v, c, offset, cut_angle, unit, measured) {
   console.log("Graphing");
 
   var data = [];
 
-  var a_guess = estimateAngle(v, c, 1 * unit, 0);
+  var a_guess = estimateAngle(v, c, 1 * unit, cut_angle);
 
   var max_mark = 100 / sight_settings.sight_scale;
   for (let i = 0; i < measured.length; i++) {
@@ -584,13 +583,15 @@ function graphMarks(div, sight_settings, v, c, offset, measured, unit) {
     try {
       let d = i * unit;
 
-      let a = findAngle(v, c, d, 0, a_guess);
+      let a = findAngle(v, c, d, cut_angle, a_guess);
       a_guess = a;
 
-      let m = angleToMark(sight_settings, sight_settings.sight_bar_position, a, d, 0);
+      let m = angleToMark(sight_settings, sight_settings.sight_bar_position, a, d, cut_angle);
       let actual = m + offset;
 
-      if (d > measured[measured.length-1][0] && actual > max_mark) {
+      console.log(`${d} = ${m} / ${actual}`);
+
+      if (d > measured[measured.length-1][0] + 10 && actual > max_mark) {
         break;
       }
 
@@ -602,10 +603,13 @@ function graphMarks(div, sight_settings, v, c, offset, measured, unit) {
   }
 
   var measuredInUnit = [];
-  for (let i = 0; i < measured.length; i++) {
-    let d = measured[i][0] / unit;
-    let m = measured[i][1];
-    measuredInUnit.push([d, m]);
+
+  if (cut_angle == 0) {
+    for (let i = 0; i < measured.length; i++) {
+      let d = measured[i][0] / unit;
+      let m = measured[i][1];
+      measuredInUnit.push([d, m]);
+    }
   }
 
   Highcharts.chart(div, {
@@ -810,6 +814,13 @@ function readValues() {
 }
 
 function updateMark() {
+  var out_mark = "Unknown";
+  var out_fps = "Unknown";
+  var out_t = "Unknown";
+  var out_drop = "Unknown";
+  var out_vert = "Unknown";
+  var out_horz = "Unknown";
+
   try {
     console.log("calculating mark");
 
@@ -821,22 +832,30 @@ function updateMark() {
     var a_guess = estimateAngle(calc_v, calc_c, d * unit, cut_angle);
 
     let [m, a, fps, t, drop, verticalMarks, horizontalMarks] = calculateMark(sight_settings, sight_bar,
-      calc_v, calc_c, calc_offset, cut_angle, unit, d, a_guess);
+      calc_v, calc_c, calc_offset, cut_angle, d * unit, a_guess);
 
     console.log(`calculating mark ${d} = ${m}`);
 
-    document.getElementById("calc_mark_output_mark").innerText = roundToClick(sight_settings, m);
-    document.getElementById("calc_mark_output_v").innerText = fps.toFixed(1) + " fps";
-    document.getElementById("calc_mark_output_t").innerText = t.toFixed(3) + " s";
-    document.getElementById("calc_mark_output_drop").innerText = drop.toFixed(1) + " cm";
-    document.getElementById("calc_mark_output_vertical_turn").innerText = verticalMarks.toFixed(2) + " cm";
-    document.getElementById("calc_mark_output_horizontal_turn").innerText = horizontalMarks.toFixed(2) + " cm";
+    out_mark = roundToClick(sight_settings, m);
+    out_fps = fps.toFixed(1) + " fps";
+    out_t = t.toFixed(3) + " s";
+    out_drop = drop.toFixed(1) + " cm";
+    out_vert = verticalMarks.toFixed(2) + " cm";
+    out_horz = horizontalMarks.toFixed(2) + " cm";
 
     console.log("Updated mark");
 
   } catch (error) {
     console.log(error);
   }
+
+
+  document.getElementById("calc_mark_output_mark").innerText = out_mark;
+  document.getElementById("calc_mark_output_v").innerText = out_fps;
+  document.getElementById("calc_mark_output_t").innerText = out_t;
+  document.getElementById("calc_mark_output_drop").innerText = out_drop;
+  document.getElementById("calc_mark_output_vertical_turn").innerText = out_vert;
+  document.getElementById("calc_mark_output_horizontal_turn").innerText = out_horz;
 }
 
 function updateMarks() {
@@ -863,10 +882,11 @@ function updateGraph() {
     console.log("graph marks");
 
     let unit = toScale(document.getElementById("calc_unit").value);
+    let cut_angle = document.getElementById("cut_angle").value * radian;
 
     let data = marksToM(sight_settings, marks);
 
-    graphMarks("graph", sight_settings, calc_v, calc_c, calc_offset, data, unit);
+    graphMarks("graph", sight_settings, calc_v, calc_c, calc_offset, cut_angle, unit, data);
 
     console.log("Updated graph");
 
@@ -922,13 +942,22 @@ function maybeUpdateEverything() {
   }
 }
 
-document.getElementById("calculate").onclick = function() {
+document.getElementById("calculate_1").onclick = function() {
   try {
     updateEverything();
   } catch (error) {
     console.log(error);
   }
 };
+
+document.getElementById("calculate_2").onclick = function() {
+  try {
+    updateEverything();
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 
 document.getElementById("calc_unit").onchange = function() {
   try {
@@ -948,19 +977,6 @@ document.getElementById("calculate_mark").onclick = function() {
   }
 
   updateMark();
-};
-
-
-document.getElementById("calculate_marks").onclick = function() {
-  try {
-    if (maybeUpdateEverything()) {
-      return;
-    }
-  } catch (error) {
-    console.log(error);
-  }
-
-  updateMarks();
 };
 
 function setDefaults() {
