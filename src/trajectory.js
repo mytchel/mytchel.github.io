@@ -7,11 +7,11 @@ let yard_to_m = 0.9144;
 
 let g = 9.80665;
 
-let y_error = 0.001;
+let y_error = 0.0001;
 let y_estimate_error = 0.1;
 let x_estimate_error = 0.5;
-let v_error = 0.1 * feet_to_m;
-let c_error = 0.000001;
+let v_error = 0.01 * feet_to_m;
+let c_error = 0.0000001;
 let calc_min_t_step = 0.00001;
 let calc_steps = 500;
 let tries = 100;
@@ -29,14 +29,6 @@ function cutDists(d, cut_angle) {
   return [x_target, y_target];
 }
 
-// TODO: compound
-// and take into account the sight bar angling
-// it also is wrong for very close, point blank shouldn't read as much more than 10, it should zero on the arrow. Do I need to have arrow to sight zero measured?
-// do I need to account for the eye not being directly above the arrow?
-// Should the measure be eye to pin, not nock to pin?
-//
-// raising the bow raises the peep?
-//
 function angleToMark(sight_settings, sight_bar_position, a, d, cut_angle) {
   let [x_target, y_target] = cutDists(d, cut_angle);
 
@@ -859,12 +851,25 @@ function updateMarks() {
   try {
     console.log("calculating marks");
 
-    let unit = toScale(document.getElementById("calc_unit").value);
-    let cut_angle = document.getElementById("cut_angle").value * -radian;
+    let unit = toScale(document.getElementById("marks_unit").value);
 
-    populateMarks(sight_settings, calc_v, calc_c, calc_offset, cut_angle, unit);
+    populateMarks(sight_settings, calc_v, calc_c, calc_offset, 0, unit);
+    
+    console.log("Updated marks");
 
-    let dists = document.getElementById("trajectory_dists").value.split(/\s*,\s*/).map(Number);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+
+function updateTrajectory() {
+  try {
+    console.log("calculating trajectories");
+
+    let unit = toScale(document.getElementById("trajectory_unit").value);
+    let cut_angle = document.getElementById("trajectory_cut_angle").value * -radian;
+    let dists = document.getElementById("trajectory_dists").value.split(/\s*,\s*/).map(Number).sort();
     drawTrajectories(calc_v, calc_c, calc_offset, cut_angle, unit, dists);
 
     console.log("Updated marks");
@@ -919,6 +924,7 @@ function updateEverything() {
 
   updateGraph();
   updateMark();
+  updateTrajectory();
   updateMarks();
 }
 
@@ -935,6 +941,7 @@ function maybeUpdateEverything() {
     updateEverything();
     return true;
   } else {
+    console.log("No need to update everything");
     return false;
   }
 }
@@ -947,21 +954,21 @@ document.getElementById("calculate").onclick = function() {
   }
 };
 
-document.getElementById("calculate_trajectory_and_marks").onclick = function() {
+function handleUpdateTrajectory() {
+  console.log("handle update tra");
   try {
     if (maybeUpdateEverything()) {
       return;
     }
 
-    updateMarks();
+    updateTrajectory();
 
   } catch (error) {
     console.log(error);
   }
-};
+}
 
-
-document.getElementById("calc_unit").onchange = function() {
+function handleUpdateMarks() {
   try {
     if (maybeUpdateEverything()) {
       return;
@@ -974,29 +981,58 @@ document.getElementById("calc_unit").onchange = function() {
   }
 }
 
-document.getElementById("graph_unit").onchange = function() {
+function handleUpdateGraph() {
   try {
     if (maybeUpdateEverything()) {
       return;
     }
 
     updateGraph();
+
   } catch (error) {
     console.log(error);
   }
 }
 
-document.getElementById("calculate_mark").onclick = function() {
+function handleUpdateMark() {
   try {
     if (maybeUpdateEverything()) {
       return;
     }
+
+    updateMark();
+
   } catch (error) {
     console.log(error);
   }
+}
 
-  updateMark();
-};
+function onEnter(f) {
+  return function(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();   // prevent form submission if inside a <form>
+      f();
+    }
+  }
+}
+
+document.getElementById("draw_trajectory").onclick = handleUpdateTrajectory;
+document.getElementById("trajectory_unit").onchange = handleUpdateTrajectory;
+document.getElementById("trajectory_cut_angle")
+  .addEventListener('keydown', onEnter(handleUpdateTrajectory));
+document.getElementById("trajectory_dists")
+  .addEventListener('keydown', onEnter(handleUpdateTrajectory));
+
+document.getElementById("marks_unit").onchange = handleUpdateMarks;
+document.getElementById("graph_unit").onchange = handleUpdateGraph;
+
+document.getElementById("calculate_mark").onclick = handleUpdateMark;
+document.getElementById("calc_mark_dist")
+  .addEventListener('keydown', onEnter(handleUpdateMark));
+document.getElementById("calc_mark_cut")
+  .addEventListener('keydown', onEnter(handleUpdateMark));
+document.getElementById("calc_mark_sight_bar")
+  .addEventListener('keydown', onEnter(handleUpdateMark));
 
 function setDefaults() {
   readStored();

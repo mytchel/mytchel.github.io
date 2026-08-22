@@ -165,7 +165,7 @@
                   </td>
                 </tr>
                 <tr>
-                  <td>Velocity:</td>
+                  <td>Velocity at impact:</td>
                   <td class="right-align">
                     <input class="input-result" type="text" readonly 
                       id="calc_mark_output_v"/>
@@ -179,7 +179,7 @@
                   </td>
                 </tr>
                 <tr>
-                  <td>Drop:</td>
+                  <td>Drop (cm/m):</td>
                   <td class="right-align">
                     <input class="input-result" type="text" readonly 
                       id="calc_mark_output_drop"/>
@@ -205,12 +205,12 @@
         </div> 
       </div>
       <div class="centered">
-        <h1>Full Results</h1>
+        <h1>Draw Trajectory</h1>
         <table>
           <tr>
             <td>Unit</td>
             <td class="right-align">
-              <select id="calc_unit">
+              <select id="trajectory_unit">
                 <option value="m">m</option>
                 <option value="yd">yd</option>
                 <option value="ft">ft</option>
@@ -219,28 +219,40 @@
             <tr>
               <td>Cut angle:</td>
               <td class="right-align">
-                <input type="number" id="cut_angle"  class="input-measure" value="0" />
+                <input type="number" id="trajectory_cut_angle"  class="input-measure" value="0" />
               </td>
             </tr>
             <tr>
-              <td>Trajectory dists:</td>
+              <td>Distances:</td>
               <td class="right-align">
                 <input type="text" id="trajectory_dists" value="5,18,30,50,70,90" />
               </td>
             </tr>
         </table>
-        <button id="calculate_trajectory_and_marks">Calculate</button>
+        <button id="draw_trajectory">Redraw</button>
         <div class="full" id="trajectory_canvas_container" >
           <canvas id="trajectory_canvas"></canvas>
         </div>
         <div class="centered">
           <h1>Marks</h1>
+          <table>
+            <tr>
+              <td>Unit</td>
+              <td class="right-align">
+                <select id="marks_unit">
+                  <option value="m">m</option>
+                  <option value="yd">yd</option>
+                  <option value="ft">ft</option>
+                </select>
+              </td>
+            </tr>
+          </table>
           <table id="calc_m">
             <thead>
               <tr>
                 <th>Distance</th>
                 <th>Mark</th>
-                <th>Velocity At Target (fps)</th>
+                <th>Velocity At Impact (fps)</th>
                 <th>Time To Target (s)</th>
                 <th>Drop (cm/m)</th>
                 <th>Vertical (cm/turn)</th>
