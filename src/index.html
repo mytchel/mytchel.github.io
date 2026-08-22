@@ -6,14 +6,14 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div id="container">
-      <div id="input">
+    <div class="container">
+      <div class="container">
         <div class="centered">
-          <table id="sight settings">
-            <tbody id="sight_settings">
+          <table>
+            <tbody>
               <tr>
                 <td>Sight Scale</td>
-                <td>
+                <td class="right-align">
                   <select id="sight_scale">
                     <option value="10">0-10</option>
                     <option value="1">0-100</option>
@@ -22,31 +22,31 @@
               </tr>
               <tr>
                 <td>Sight TPI Vertical</td>
-                <td><input type="number" id="sight_tpi_vertical" class="input-measure" required /></td>
+                <td class="right-align"><input type="number" id="sight_tpi_vertical" class="input-measure" required /></td>
               </tr>
               <tr>
                 <td>Sight TPI Horizontal</td>
-                <td><input type="number" id="sight_tpi_horizontal" class="input-measure" required /></td>
+                <td class="right-align"><input type="number" id="sight_tpi_horizontal" class="input-measure" required /></td>
               </tr>
               <tr>
                 <td>Clicks per turn</td>
-                <td><input type="number" id="sight_clicks_per_turn" class="input-measure" required /></td>
+                <td class="right-align"><input type="number" id="sight_clicks_per_turn" class="input-measure" required /></td>
               </tr>
               <tr>
                 <td>Sight bar spacing</td>
-                <td><input type="number" id="sight_bar_spacing" class="input-measure" required /></td>
+                <td class="right-align"><input type="number" id="sight_bar_spacing" class="input-measure" required /></td>
               </tr>
               <tr>
                 <td>Sight bar position</td>
-                <td><input type="number" id="sight_bar_position" class="input-measure" required /></td>
+                <td class="right-align"><input type="number" id="sight_bar_position" class="input-measure" required /></td>
               </tr>
               <tr>
                 <td>Eye/Peep to Sight (mm)</td>
-                <td><input type="number" id="eye_to_sight" class="input-measure" required /></td>
+                <td class="right-align"><input type="number" id="eye_to_sight" class="input-measure" required /></td>
               </tr>
               <tr>
                 <td>Arrow to Eye/Peep (mm)</td>
-                <td><input type="number" id="arrow_to_eye" class="input-measure" required /></td>
+                <td class="right-align"><input type="number" id="arrow_to_eye" class="input-measure" required /></td>
               </tr>
             </tbody>
           </table>
@@ -86,50 +86,53 @@
                     <option value="ft">Feet</option>
                   </select>
                 </td>
-                <td><input type="button" name="add" onclick="addMark(this);" value="Add Mark" /></td>
-                <td><input type="button" name="remove" onclick="removeMark(this);" value="Remove Mark" /></td>
+                <td><button onclick="addMark(this);">Add Mark</button></td>
+                <td><button onclick="removeMark(this);">Remove Mark</button></td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
-      <div class="centered">
-        <button id="calculate_1" class="big">Calculate</button>
-      </div>
-      <div id="results">
-        <h1>Calculated</h1>
-        <div id="trajectory" class="centered">
+        <div class="centered">
+          <button id="calculate">Calculate</button>
           <table id="vals">
               <tr>
                 <td>Velocity:</td>
-                <td id="velocity"></td>
+                <td class="right-align"><input class="input-result" type="text" readonly id="velocity"/></td>
               </tr>
               <tr>
                 <td>Drag:</td>
-                <td id="drag"></td>
+                <td class="right-align"><input class="input-result" type="text" readonly id="drag"/></td>
               </tr>
               <tr>
                 <td>Fit Score (closer to 0 is better):</td>
-                <td id="fit_score"></td>
+                <td class="right-align"><input class="input-result" type="text" readonly id="fit_score"/></td>
               </tr>
             </tbody>
           </table>
         </div>
-        <div>
-          <div class="centered">
-            <h1>Calculate Mark</h1>
-          </div>
+        <div class="centered">
+          <select id="graph_unit">
+            <option value="m">m</option>
+            <option value="yd">yd</option>
+            <option value="ft">ft</option>
+          </select>
+          <div class="full" id="graph"></div>
+        </div>
+      </div>
+      <div class="centered">
+        <h1>Calculate Mark</h1>
+        <div class="container">
           <div class="centered">
             <table id="vals">
                 <tr>
                   <td>Distance</td>
-                  <td>
+                  <td class="right-align">
                     <input type="number" id="calc_mark_dist" class="input-dist" value="70" />
                   </td>
                 </tr>
                 <tr>
                   <td>Unit</td>
-                  <td>
+                  <td class="right-align">
                     <select id="calc_mark_unit">
                       <option value="m">m</option>
                       <option value="yd">yd</option>
@@ -139,98 +142,113 @@
                 </tr>
                 <tr>
                   <td>Cut</td>
-                  <td>
+                  <td class="right-align">
                     <input type="number" id="calc_mark_cut" class="input-measure" value="0" />
                   </td>
                 </tr>
                 <tr>
                   <td>Sight Bar</td>
-                  <td>
+                  <td class="right-align">
                     <input type="number" id="calc_mark_sight_bar" class="input-measure" value="1" />
                   </td>
                 </tr>
             </table>
-          </div>
-          <div class="centered">
             <button id="calculate_mark">Calculate</button>
           </div>
-          <div class="centered">
+          <div>
             <table>
                <tr>
-                  <td>Mark</td>
-                  <td id="calc_mark_output_mark"></td>
+                  <td>Mark:</td>
+                  <td class="right-align">
+                    <input class="input-result" type="text" readonly 
+                      id="calc_mark_output_mark"/>
+                  </td>
                 </tr>
                 <tr>
-                  <td>Velocity</td>
-                  <td id="calc_mark_output_v"></td>
+                  <td>Velocity:</td>
+                  <td class="right-align">
+                    <input class="input-result" type="text" readonly 
+                      id="calc_mark_output_v"/>
+                  </td>
                 </tr>
                 <tr>
-                  <td>Time to target</td>
-                  <td id="calc_mark_output_t"></td>
+                  <td>Time to target:</td>
+                  <td class="right-align">
+                    <input class="input-result" type="text" readonly 
+                      id="calc_mark_output_t"/>
+                  </td>
                 </tr>
                 <tr>
-                  <td>Drop</td>
-                  <td id="calc_mark_output_drop"></td>
+                  <td>Drop:</td>
+                  <td class="right-align">
+                    <input class="input-result" type="text" readonly 
+                      id="calc_mark_output_drop"/>
+                  </td>
                 </tr>
                 <tr>
-                  <td>Vertical (cm/turn)</td>
-                  <td id="calc_mark_output_vertical_turn"</td>
+                  <td>Vertical (cm/turn):</td>
+                  <td class="right-align">
+                    <input class="input-result" type="text" readonly 
+                      id="calc_mark_output_vertical_turn"/>
+                  </td>
                 </tr>
                 <tr>
-                  <td>Horizontal (cm/turn)</td>
-                  <td id="calc_mark_output_horizontal_turn"></td>
+                  <td>Horizontal (cm/turn):</td>
+                  <td class="right-align">
+                    <input class="input-result" type="text" readonly 
+                      id="calc_mark_output_horizontal_turn"/>
+                  </td>
                 </tr>
              </tbody>
             </table>
-          </div>
+          </div> 
         </div> 
-        <div class="centered">
-          <h1>Full Results</h1>
-        </div>
-        <div class="centered">
-          <select id="calc_unit" class="big">
-            <option value="m">Output Meters</option>
-            <option value="yd">Output Yards</option>
-            <option value="ft">Output Feet</option>
-          </select>
-        </div>
-        <div>
-          <div class="centered">
-            <p>Cut angle:</p>
-            <input type="number" id="cut_angle"  class="input-measure" value="0" /></td>
-          </div>
-          <div class="centered">
-            <p>Trajectory dists: </p>
-            <input type="text" id="trajectory_dists" value="5,18,30,50,70,90"></input>
-          </div>
-          <div class="centered">
-            <button id="calculate_2" class="big">Calculate</button>
-          </div>
-        </div>
-        <div id="graph"></div>
-        <div id="trajectory_canvas_container" class="centered">
+      </div>
+      <div class="centered">
+        <h1>Full Results</h1>
+        <table>
+          <tr>
+            <td>Unit</td>
+            <td class="right-align">
+              <select id="calc_unit">
+                <option value="m">m</option>
+                <option value="yd">yd</option>
+                <option value="ft">ft</option>
+              </select>
+            </td>
+            <tr>
+              <td>Cut angle:</td>
+              <td class="right-align">
+                <input type="number" id="cut_angle"  class="input-measure" value="0" />
+              </td>
+            </tr>
+            <tr>
+              <td>Trajectory dists:</td>
+              <td class="right-align">
+                <input type="text" id="trajectory_dists" value="5,18,30,50,70,90" />
+              </td>
+            </tr>
+        </table>
+        <button id="calculate_trajectory_and_marks">Calculate</button>
+        <div class="full" id="trajectory_canvas_container" >
           <canvas id="trajectory_canvas"></canvas>
         </div>
-        <div id="calculated">
-          <div class="centered">
+        <div class="centered">
           <h1>Marks</h1>
-          </div>
-          <div class="centered">
-            <table id="calc_m">
-              <thead>
-                <tr>
-                  <th>Distance</th>
-                  <th>Mark</th>
-                  <th>Velocity At Target (fps)</th>
-                  <th>Time To Target (s)</th>
-                  <th>Drop (cm/m)</th>
-                  <th>Vertical (cm/turn)</th>
-                  <th>Horizontal (cm/turn)</th>
-                </tr>
-              </thead>
-              <tbody id="marks"></tbody>
-            </table>
-          </div>
+          <table id="calc_m">
+            <thead>
+              <tr>
+                <th>Distance</th>
+                <th>Mark</th>
+                <th>Velocity At Target (fps)</th>
+                <th>Time To Target (s)</th>
+                <th>Drop (cm/m)</th>
+                <th>Vertical (cm/turn)</th>
+                <th>Horizontal (cm/turn)</th>
+              </tr>
+            </thead>
+            <tbody id="marks"></tbody>
+          </table>
        </div>
       </div>
     </div>

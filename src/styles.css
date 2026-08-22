@@ -20,23 +20,79 @@ input[type=number] {
 }
 
 div {
-  padding: 1em;
-  justify-content: center;
-  display: block;
-  text-align: center;
+  border: 3px solid gray;
 }
 
 .centered {
+  padding: 1em;
+  gap: 10px;       /* Adds spacing between items without affecting size */
+ 
   display: flex;
   justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  
+  justify-content: center;  /* center items horizontally on each row */
+  align-content: center;    /* center rows vertically when wrapped */
+  align-items: center;      /* center items within each row */
+}
+
+.container {
+  padding: 1em;
+  gap: 10px;       /* Adds spacing between items without affecting size */
+
+  display: flex;
+  flex-wrap: wrap;          /* allow children to wrap to next line */
+  justify-content: center;  /* center items horizontally on each row */
+  align-content: center;    /* center rows vertically when wrapped */
+  align-items: center;      /* center items within each row */
+}
+
+
+.input-result {
+  text-align: right;
+  width: 5em;
+}
+
+.full {
+  width: calc(100vw - 200px);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
 }
 
 #graph {
   height: 400px;
 }
 
+#trajectory_canvas_container {
+  padding: 0px;
+  gap: 0px;
+  width: calc(100vw - 100px);
+}
+
 td, th {
   text-align: left; 
-  padding: 10px;
+  padding: 5px;
+}
+
+td.right-align {
+  display: flex;
+  justify-content: flex-end;  /* push select to the right */
+  align-items: center;
+}
+
+select,
+button {
+  width: 100%;              /* or any fixed value like 200px */
+  box-sizing: border-box;   /* padding & border included in width */
+  padding: 0.4rem 0.8rem;   /* same padding on both */
+  font-size: 1rem;          /* same font size → same height */
+  font-family: inherit;     /* don't let browser defaults differ */
+  border: 1px solid #ccc;   /* same border */
+  line-height: 1.4;         /* consistent line height */
+  border-radius: 4px;
 }
 
